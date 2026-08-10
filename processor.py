@@ -1,30 +1,35 @@
 import json
 
-class InputValidationError(Exception):
-    pass
-
 class DataProcessor:
-    def __init__(self, data):
-        self.data = data
+    def __init__(self, data=None):
+        self.data = data or []  # Initialize with an empty list if no data is provided
 
-    def validate_input(self):
-        if not isinstance(self.data, dict):
-            raise InputValidationError('Input must be a dictionary')
-        if 'name' not in self.data or not self.data['name']:
-            raise InputValidationError('Name is required')
-        if 'age' not in self.data or not isinstance(self.data['age'], int):
-            raise InputValidationError('Age must be a valid integer')
+    def add_data(self, new_data):
+        """Add new data to the processor."""
+        self.data.append(new_data)
 
-    def process(self):
+    def remove_data(self, target_data):
+        """Remove specific data from the processor if it exists."""
         try:
-            self.validate_input()
-            # Processing logic here
-            result = {'status': 'success', 'data': self.data}
-            return json.dumps(result)
-        except InputValidationError as e:
-            return json.dumps({'status': 'error', 'message': str(e)})
+            self.data.remove(target_data)
+        except ValueError:
+            print(f'ValueError: {target_data} not found in data')
 
-if __name__ == '__main__':
-    input_data = {'name': 'John', 'age': 30}
-    processor = DataProcessor(input_data)
-    print(processor.process())
+    def to_json(self):
+        """Convert the current data to JSON format."""
+        return json.dumps(self.data)
+
+    def from_json(self, json_data):
+        """Load data from a JSON string."""
+        try:
+            self.data = json.loads(json_data)
+        except json.JSONDecodeError:
+            print('JSONDecodeError: Invalid JSON format')
+
+    def clear_data(self):
+        """Clear all stored data."""
+        self.data.clear()  
+
+    def get_data(self):
+        """Return a copy of the stored data."""
+        return self.data.copy()
