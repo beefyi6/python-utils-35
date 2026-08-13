@@ -1,47 +1,34 @@
-from typing import List, Dict, Any
+import time
+import threading
 
+class AutoClicker:
+    def __init__(self, interval=0.1):
+        self.interval = interval
+        self.running = False
+        self.thread = None
 
-def process_data(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """
-    Processes a list of data dictionaries by applying transformations.
+    def start(self):
+        if not self.running:
+            self.running = True
+            self.thread = threading.Thread(target=self._click_loop)
+            self.thread.start()
 
-    Args:
-        data (List[Dict[str, Any]]): A list of dictionaries to process.
+    def stop(self):
+        self.running = False
+        if self.thread:
+            self.thread.join()
 
-    Returns:
-        List[Dict[str, Any]]: A list of processed dictionaries.
-    """
-    processed_data = []
-    for item in data:
-        transformed_item = {key: str(value).upper() for key, value in item.items()}
-        processed_data.append(transformed_item)
-    return processed_data
+    def _click_loop(self):
+        while self.running:
+            self.perform_click()
+            time.sleep(self.interval)
 
-
-def filter_data(data: List[Dict[str, Any]], key: str, value: Any) -> List[Dict[str, Any]]:
-    """
-    Filters a list of data dictionaries based on a key-value pair.
-
-    Args:
-        data (List[Dict[str, Any]]): A list of dictionaries to filter.
-        key (str): The key to check in each dictionary.
-        value (Any): The value to match against.
-
-    Returns:
-        List[Dict[str, Any]]: A list of dictionaries matching the key-value criteria.
-    """
-    return [item for item in data if item.get(key) == value]
-
-
-def main():
-    example_data = [
-        {'name': 'Alice', 'age': 30},
-        {'name': 'Bob', 'age': 25},
-    ]
-    processed = process_data(example_data)
-    filtered = filter_data(processed, 'AGE', '25')
-    print(filtered)
-
+    def perform_click(self):
+        # Simulate a mouse click
+        print('Mouse clicked!')  # Placeholder for actual click action
 
 if __name__ == '__main__':
-    main()
+    clicker = AutoClicker(interval=0.05)
+    clicker.start()  # Start autoclicking
+    time.sleep(1)  # Run for 1 second
+    clicker.stop()  # Stop autoclicking
