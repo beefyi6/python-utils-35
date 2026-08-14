@@ -1,34 +1,33 @@
 import time
-import threading
+import requests
+from requests.exceptions import RequestException
 
-class AutoClicker:
-    def __init__(self, interval=0.1):
-        self.interval = interval
-        self.running = False
-        self.thread = None
+class NetworkOperation:
+    MAX_RETRIES = 3
+    RETRY_DELAY = 2  # seconds
 
-    def start(self):
-        if not self.running:
-            self.running = True
-            self.thread = threading.Thread(target=self._click_loop)
-            self.thread.start()
+    @staticmethod
+    def fetch_data(url):
+        attempt = 0
+        while attempt < NetworkOperation.MAX_RETRIES:
+            try:
+                response = requests.get(url)
+                response.raise_for_status()  # Raises HTTPError for bad responses
+                return response.json()  # Return JSON content
+            except RequestException as e:
+                attempt += 1
+                print(f"Attempt {attempt} failed: {e}")
+                if attempt < NetworkOperation.MAX_RETRIES:
+                    time.sleep(NetworkOperation.RETRY_DELAY)
+                else:
+                    print("Max retries reached. Exiting.")
+                    return None
 
-    def stop(self):
-        self.running = False
-        if self.thread:
-            self.thread.join()
-
-    def _click_loop(self):
-        while self.running:
-            self.perform_click()
-            time.sleep(self.interval)
-
-    def perform_click(self):
-        # Simulate a mouse click
-        print('Mouse clicked!')  # Placeholder for actual click action
-
+# Example usage
 if __name__ == '__main__':
-    clicker = AutoClicker(interval=0.05)
-    clicker.start()  # Start autoclicking
-    time.sleep(1)  # Run for 1 second
-    clicker.stop()  # Stop autoclicking
+    url = 'https://api.example.com/data'
+    data = NetworkOperation.fetch_data(url)
+    if data:
+        print(data)
+    else:
+        print("Failed to retrieve data.")
