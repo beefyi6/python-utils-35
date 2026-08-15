@@ -1,30 +1,24 @@
-import time
-import requests
+import re
 
-class NetworkError(Exception):
-    pass
+def is_valid_click_speed(speed):
+    """Check if click speed is within allowable range."""
+    return isinstance(speed, (int, float)) and 0 < speed <= 10
 
-def retry_request(url, retries=3, delay=2):
-    for attempt in range(retries):
-        try:
-            response = requests.get(url)
-            response.raise_for_status()  # Raise an error for bad responses
-            return response.json()  # Assuming JSON response is expected
-        except requests.exceptions.HTTPError as e:
-            print(f"HTTP error occurred: {e}")
-            raise NetworkError(f"Failed to get a successful response: {e}")
-        except requests.exceptions.RequestException as e:
-            print(f"Request failed: {e}")
-            if attempt < retries - 1:
-                time.sleep(delay)  # Wait before retrying
-            else:
-                raise NetworkError(f"Max retries exceeded for {url}")
-    return None
+def is_valid_click_count(count):
+    """Check if click count is a positive integer."""
+    return isinstance(count, int) and count > 0
 
-# Example usage:
-if __name__ == '__main__':
-    try:
-        data = retry_request('https://api.example.com/data')
-        print(data)
-    except NetworkError as e:
-        print(f"Network operation failed: {e}")
+def is_valid_hotkey(hotkey):
+    """Validate if the provided hotkey is in the correct format."""
+    pattern = re.compile(r'^[a-zA-Z0-9]+$')
+    return isinstance(hotkey, str) and pattern.match(hotkey)
+
+def validate_settings(settings):
+    """Validate the settings for the autoclicker."""
+    if not is_valid_click_speed(settings.get('click_speed')):
+        raise ValueError('Invalid click speed')
+    if not is_valid_click_count(settings.get('click_count')):
+        raise ValueError('Invalid click count')
+    if not is_valid_hotkey(settings.get('hotkey')):
+        raise ValueError('Invalid hotkey')
+    return True
