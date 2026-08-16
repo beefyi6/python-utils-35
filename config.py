@@ -1,31 +1,23 @@
 import json
 import os
 
-DEFAULTS = {
-    "click_interval": 0.1,
-    "click_count": 100,
-    "mouse_button": "left",
-    "running": false
-}
-
 class ConfigLoader:
-    def __init__(self, config_file='config.json'):
-        self.config_file = config_file
-        self.config = DEFAULTS.copy()  # Start with defaults
-        self.load_config()
+    def __init__(self, default_config_path='default_config.json', user_config_path='user_config.json'):
+        self.default_config_path = default_config_path
+        self.user_config_path = user_config_path
+        self.config = self.load_config()
 
     def load_config(self):
-        if os.path.exists(self.config_file):
-            with open(self.config_file, 'r') as f:
-                try:
-                    user_config = json.load(f)
-                    self.config.update(user_config)  # Update with user-defined values
-                except json.JSONDecodeError:
-                    print(f'Error: {self.config_file} is not a valid JSON file.')
+        default_config = self.load_json(self.default_config_path)
+        user_config = self.load_json(self.user_config_path)
+        return {**default_config, **user_config}
 
-    def get(self, key, default=None):
-        return self.config.get(key, default)
+    def load_json(self, file_path):
+        if not os.path.exists(file_path):
+            return {}
+        with open(file_path, 'r') as file:
+            return json.load(file)
 
-# Example usage:
-# config_loader = ConfigLoader()
-# print(config_loader.get('click_interval'))
+if __name__ == '__main__':
+    config_loader = ConfigLoader()
+    print(config_loader.config)
