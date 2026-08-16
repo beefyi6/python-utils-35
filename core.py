@@ -1,33 +1,32 @@
 import time
-import requests
-from requests.exceptions import RequestException
+from typing import Optional
 
-class NetworkOperation:
-    MAX_RETRIES = 3
-    RETRY_DELAY = 2  # seconds
+class AutoClicker:
+    def __init__(self, interval: float, duration: Optional[float] = None) -> None:
+        """
+        Initializes the AutoClicker with a specific interval and optional duration.
+        
+        :param interval: The time interval (in seconds) between clicks.
+        :param duration: The total duration (in seconds) to run the auto clicker. If None, runs indefinitely.
+        """
+        self.interval = interval
+        self.duration = duration
+        self.start_time = time.time() if duration is not None else None
 
-    @staticmethod
-    def fetch_data(url):
-        attempt = 0
-        while attempt < NetworkOperation.MAX_RETRIES:
-            try:
-                response = requests.get(url)
-                response.raise_for_status()  # Raises HTTPError for bad responses
-                return response.json()  # Return JSON content
-            except RequestException as e:
-                attempt += 1
-                print(f"Attempt {attempt} failed: {e}")
-                if attempt < NetworkOperation.MAX_RETRIES:
-                    time.sleep(NetworkOperation.RETRY_DELAY)
-                else:
-                    print("Max retries reached. Exiting.")
-                    return None
+    def click(self) -> None:
+        """
+        Simulates a mouse click. This should be replaced with actual click functionality.
+        """
+        print("Click!")  # Placeholder for the actual click action
 
-# Example usage
-if __name__ == '__main__':
-    url = 'https://api.example.com/data'
-    data = NetworkOperation.fetch_data(url)
-    if data:
-        print(data)
-    else:
-        print("Failed to retrieve data.")
+    def run(self) -> None:
+        """
+        Starts the auto clicker, executing clicks at the specified interval for the specified duration.
+        """
+        while True:
+            self.click()
+            if self.duration is not None:
+                elapsed = time.time() - self.start_time
+                if elapsed >= self.duration:
+                    break
+            time.sleep(self.interval)
