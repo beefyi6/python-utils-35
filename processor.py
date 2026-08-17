@@ -1,35 +1,32 @@
-import json
+import time
+import random
 
-class DataProcessor:
-    def __init__(self, data=None):
-        self.data = data or []  # Initialize with an empty list if no data is provided
+class AutoClicker:
+    def __init__(self, click_interval, duration):
+        self.click_interval = click_interval
+        self.duration = duration
 
-    def add_data(self, new_data):
-        """Add new data to the processor."""
-        self.data.append(new_data)
+    def validate_input(self):
+        if not isinstance(self.click_interval, (int, float)) or self.click_interval <= 0:
+            raise ValueError('Click interval must be a positive number.')
+        if not isinstance(self.duration, (int, float)) or self.duration <= 0:
+            raise ValueError('Duration must be a positive number.')
 
-    def remove_data(self, target_data):
-        """Remove specific data from the processor if it exists."""
-        try:
-            self.data.remove(target_data)
-        except ValueError:
-            print(f'ValueError: {target_data} not found in data')
+    def start(self):
+        self.validate_input()
+        end_time = time.time() + self.duration
+        while time.time() < end_time:
+            self.click()
+            time.sleep(self.click_interval)
 
-    def to_json(self):
-        """Convert the current data to JSON format."""
-        return json.dumps(self.data)
+    def click(self):
+        # Simulating a mouse click
+        print('Click!')
 
-    def from_json(self, json_data):
-        """Load data from a JSON string."""
-        try:
-            self.data = json.loads(json_data)
-        except json.JSONDecodeError:
-            print('JSONDecodeError: Invalid JSON format')
-
-    def clear_data(self):
-        """Clear all stored data."""
-        self.data.clear()  
-
-    def get_data(self):
-        """Return a copy of the stored data."""
-        return self.data.copy()
+# Example usage
+if __name__ == '__main__':
+    try:
+        clicker = AutoClicker(click_interval=0.5, duration=10)
+        clicker.start()
+    except ValueError as e:
+        print(f'Input error: {e}')
