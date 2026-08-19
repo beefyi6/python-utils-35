@@ -1,23 +1,24 @@
-class AutoClickerException(Exception):
-    """Base class for all exceptions raised by the autoclicker."""
+class AutoClickerError(Exception):
+    """Base class for exceptions in AutoClicker."""
     pass
 
-class InvalidConfigurationError(AutoClickerException):
-    """Exception raised for invalid configurations."""
-    def __init__(self, message):
-        self.message = message
-        super().__init__(self.message)
+class ClickLimitExceededError(AutoClickerError):
+    """Raised when click limit is exceeded."""
+    def __init__(self, limit):
+        self.limit = limit
+        super().__init__(f'Click limit of {limit} exceeded.')
 
-class ClickRateExceededError(AutoClickerException):
-    """Exception raised when the click rate exceeds the limit."""
-    def __init__(self, threshold):
-        self.threshold = threshold
-        self.message = f"Click rate exceeds limit of {self.threshold} clicks per second."
-        super().__init__(self.message)
-
-class ClickIntervalError(AutoClickerException):
-    """Exception raised for invalid click intervals."""
+class InvalidClickIntervalError(AutoClickerError):
+    """Raised when an invalid click interval is provided."""
     def __init__(self, interval):
         self.interval = interval
-        self.message = f"Click interval of {self.interval} seconds is invalid."
-        super().__init__(self.message)
+        super().__init__(f'Invalid click interval: {interval}. Must be positive.')
+
+class ClickerNotRunningError(AutoClickerError):
+    """Raised when clicker operations are attempted while not running."""
+    pass
+
+class ConfigurationError(AutoClickerError):
+    """Raised for invalid configuration settings."""
+    def __init__(self, message):
+        super().__init__(message)
