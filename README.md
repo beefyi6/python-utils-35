@@ -1,46 +1,53 @@
 # python-utils-35
 
-A collection of utility functions designed to enhance the productivity of Python developers. This library simplifies common tasks such as data manipulation, file handling, and string processing with minimal setup.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
+
+`python-utils-35` is a high-performance, lightweight asynchronous autoclicker built purely in Python. Designed for automation tasks, it provides precise timing control and minimal CPU overhead through direct system API hooks.
 
 ## Features
-- **Data Handling**: Quickly convert lists and dictionaries to JSON and vice versa with error handling.
-- **File Operations**: Efficiently read and write to CSV files with automatic header generation and type inference.
-- **String Utilities**: Transform strings with functions for trimming, case conversion, and searching with regex support.
-- **Custom Logging**: Implement a simple logger that can be easily configured to output messages to files or the console.
+
+- **Sub-Millisecond Precision**: Leverages high-resolution performance counters to ensure consistent CPS (clicks per second) rates without thread sleeping drift.
+- **Configurable Patterns**: Supports fixed intervals, randomized human-like delays, and customizable burst firing to bypass basic rate-limiting detection.
+- **Global Hotkey Integration**: Easily toggle clicking states on the fly using customizable keyboard shortcuts without needing focus on the target window.
+- **Multi-Button Mapping**: Configure automated triggers for Left, Right, and Middle mouse buttons independently.
 
 ## Installation
 
-To install the package, you can use pip. Run the following command in your terminal:
+Ensure you have Python 3.8 or higher installed on your system. Clone the repository and install the required dependencies:
 
 ```bash
-pip install python-utils-35
+git clone https://github.com/Developer/python-utils-35.git
+cd python-utils-35
+pip install -r requirements.txt
 ```
 
-## Basic Usage Example
+*(Note: Depending on your operating system, administrative privileges or accessibility permissions may be required for global input monitoring).*
 
-Here's a simple example demonstrating how to use some of the utilities provided by the `python-utils-35` library:
+## Usage
+
+Here is a basic script to run the autoclicker with a fixed interval of 50 milliseconds (20 CPS) toggled by the `F6` key.
 
 ```python
-from utils import JsonUtils, FileUtils, StringUtils, Logger
+from utils35 import AutoClicker, MouseButton
 
-# Initialize logger
-logger = Logger('app.log')
-logger.info("Starting the utility example.")
+# Initialize the autoclicker
+# delay in seconds (0.05s = 50ms), targeting the left mouse button
+clicker = AutoClicker(
+    delay=0.05, 
+    button=MouseButton.LEFT, 
+    toggle_key="f6"
+)
 
-# JSON Example
-data = {'name': 'John', 'age': 30}
-json_data = JsonUtils.to_json(data)
-logger.info(f"Converted data to JSON: {json_data}")
-
-# File Operation Example
-FileUtils.write_csv('output.csv', [['Name', 'Age'], ['Alice', 28], ['Bob', 32]])
-logger.info("CSV file created successfully.")
-
-# String Utility Example
-result = StringUtils.capitalize("hello world!")
-logger.info(f"Capitalized String: {result}")
+if __name__ == "__main__":
+    print("Autoclicker initialized. Press F6 to start/stop. Press Ctrl+C to exit.")
+    clicker.start()
 ```
 
-This concise collection of functions provides a robust framework to streamline developer tasks while maintaining clarity and usability. For further details, please refer to the documentation.
+## Contributing
 
-![License](https://img.shields.io/badge/license-MIT-green)
+Contributions are welcome! Please feel free to submit a Pull Request or open an issue for any bugs or feature requests.
+
+## License
+
+This project is open-source and available under the [MIT License](LICENSE).
