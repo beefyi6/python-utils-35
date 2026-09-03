@@ -2,40 +2,32 @@ import logging
 from logging.handlers import RotatingFileHandler
 import os
 
-
-def setup_logger(name: str, log_file: str = "autoclicker.log", level: int = logging.INFO) -> logging.Logger:
-    """Configure and return a logger with rotating file and console handlers."""
+def setup_logger(name='autoclicker', log_file='autoclicker.log', level=logging.INFO):
+    """Configures a rotating file logger for session monitoring."""
     logger = logging.getLogger(name)
     logger.setLevel(level)
-    
-    if logger.handlers:
-        return logger
+
+    # Prevent duplicate handlers if function called multiple times
+    if not logger.handlers:
+        # 5MB per file, keep 3 historical log files
+        handler = RotatingFileHandler(
+            log_file, 
+            maxBytes=5 * 1024 * 1024, 
+            backupCount=3
+        )
         
-    formatter = logging.Formatter(
-        fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
-    )
-    
-    log_dir = os.path.dirname(log_file)
-    if log_dir and not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-        
-    file_handler = RotatingFileHandler(
-        log_file, 
-        maxBytes=5 * 1024 * 1024, 
-        backupCount=3
-    )
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(level)
-    
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    console_handler.setLevel(level)
-    
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
-    
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+
+        # Add console output for development visibility
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+
     return logger
 
-
-logger = setup_logger("python_utils_35")
+# Instantiate default logger for the project
+logger = setup_logger()
