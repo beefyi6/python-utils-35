@@ -1,27 +1,52 @@
-import logging
-from logging.handlers import RotatingFileHandler
+import json
 import os
-def setup_logger(log_file="autoclicker.log", level=logging.INFO, max_bytes=1024*1024, backup_count=5):
-    """Configure logger with rotating file handler for autoclicker."""
-    logger = logging.getLogger("autoclicker")
-    # Prevent duplicate handlers on repeated calls
-    if logger.hasHandlers():
-        return logger
-    logger.setLevel(level)
-    # Create directory for log file if it doesn't exist
-    log_dir = os.path.dirname(log_file)
-    if log_dir and not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-    # Rotating file handler limits size and keeps backups
-    file_handler = RotatingFileHandler(log_file, maxBytes=max_bytes, backupCount=backup_count)
-    file_handler.setLevel(level)
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.WARNING)
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    file_handler.setFormatter(formatter)
-    console_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
-    return logger
+from typing import Any, Dict
 
-logger = setup_logger()
+DEFAULT_CONFIG = {
+    "clicks_per_second": 10.0,
+    "click_type": "left",
+    "hotkey": "f8",
+    "hold_to_click": False,
+}
+
+class ConfigManager:
+    """Manages loading, saving, and updating autoclicker configuration settings."""
+
+    def __init__(self, filepath: str = "autoclicker_config.json") -> None:
+        self.filepath = filepath
+        self.config = self.load_config()
+
+    def load_config(self) -> Dict[str, Any]:
+        """Loads config from disk, falling back to defaults if missing or corrupted."""
+        if not os.path.exists(self.filepath):
+            self.save_config(DEFAULT_CONFIG)
+            return DEFAULT_CONFIG.copy()
+        try:
+            with open(self.filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                # Ensure all default keys exist
+                for key, val in DEFAULT_CONFIG.items():
+                    if key not in data:
+                        data[key] = val
+                return data
+        except (json.JSONDecodeError, IOError):
+            return DEFAULT_CONFIG.copy()
+
+    def save_config(self, data: Dict[str, Any]) -> None:
+        """Saves configuration data safely to a JSON file."""
+        try:
+            with open(self.filepath, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=4)
+            self.config = data
+        except IOError:
+            pass
+
+    def get(self, key: str) -> Any:
+        """Retrieves a setting value, falling back to default if not found."""
+        return self.config.get(key, DEFAULT_CONFIG.get(key))
+
+    def update_setting(self, key: str, value: Any) -> None:
+        """Updates a single configuration setting and persists the change."""
+        if key in DEFAULT_CONFIG:
+            self.config[key] = value
+            self.save_config(self.config)
