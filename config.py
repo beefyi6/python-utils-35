@@ -1,52 +1,38 @@
 import json
 import os
-from typing import Any, Dict
+from typing import Dict, Any
 
 DEFAULT_CONFIG = {
-    "clicks_per_second": 10.0,
-    "click_type": "left",
-    "hotkey": "f8",
-    "hold_to_click": False,
+    "interval": 0.1,
+    "button": "left",
+    "hold_time": 0.05,
+    "randomization": False
 }
 
-class ConfigManager:
-    """Manages loading, saving, and updating autoclicker configuration settings."""
+def load_autoclicker_config(filepath: str) -> Dict[str, Any]:
+    """Loads configuration from a JSON file with fallback to defaults."""
+    if not os.path.exists(filepath):
+        save_autoclicker_config(filepath, DEFAULT_CONFIG)
+        return DEFAULT_CONFIG
 
-    def __init__(self, filepath: str = "autoclicker_config.json") -> None:
-        self.filepath = filepath
-        self.config = self.load_config()
+    try:
+        with open(filepath, 'r') as f:
+            return {**DEFAULT_CONFIG, **json.load(f)}
+    except (json.JSONDecodeError, IOError):
+        return DEFAULT_CONFIG
 
-    def load_config(self) -> Dict[str, Any]:
-        """Loads config from disk, falling back to defaults if missing or corrupted."""
-        if not os.path.exists(self.filepath):
-            self.save_config(DEFAULT_CONFIG)
-            return DEFAULT_CONFIG.copy()
-        try:
-            with open(self.filepath, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                # Ensure all default keys exist
-                for key, val in DEFAULT_CONFIG.items():
-                    if key not in data:
-                        data[key] = val
-                return data
-        except (json.JSONDecodeError, IOError):
-            return DEFAULT_CONFIG.copy()
+def save_autoclicker_config(filepath: str, config: Dict[str, Any]) -> None:
+    """Serializes the autoclicker settings to a JSON file."""
+    try:
+        with open(filepath, 'w') as f:
+            json.dump(config, f, indent=4)
+    except IOError as e:
+        print(f"Failed to save configuration: {e}")
 
-    def save_config(self, data: Dict[str, Any]) -> None:
-        """Saves configuration data safely to a JSON file."""
-        try:
-            with open(self.filepath, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=4)
-            self.config = data
-        except IOError:
-            pass
-
-    def get(self, key: str) -> Any:
-        """Retrieves a setting value, falling back to default if not found."""
-        return self.config.get(key, DEFAULT_CONFIG.get(key))
-
-    def update_setting(self, key: str, value: Any) -> None:
-        """Updates a single configuration setting and persists the change."""
-        if key in DEFAULT_CONFIG:
-            self.config[key] = value
-            self.save_config(self.config)
+def validate_config_values(config: Dict[str, Any]) -> bool:
+    """Ensures that settings fall within operational ranges."""
+    if config.get("interval", 0) < 0.001:
+        return False
+    if config.get("button") not in ["left", "right", "middle"]:
+        return False
+    return True
