@@ -5,34 +5,32 @@ from typing import Dict, Any
 DEFAULT_CONFIG = {
     "interval": 0.1,
     "button": "left",
-    "hold_time": 0.05,
-    "randomization": False
+    "repeat": 0,
+    "hotkey": "f6"
 }
 
-def load_autoclicker_config(filepath: str) -> Dict[str, Any]:
-    """Loads configuration from a JSON file with fallback to defaults."""
+def load_config(filepath: str = "config.json") -> Dict[str, Any]:
+    """Load configuration from JSON or return defaults."""
     if not os.path.exists(filepath):
-        save_autoclicker_config(filepath, DEFAULT_CONFIG)
+        save_config(DEFAULT_CONFIG, filepath)
         return DEFAULT_CONFIG
 
     try:
-        with open(filepath, 'r') as f:
-            return {**DEFAULT_CONFIG, **json.load(f)}
+        with open(filepath, "r") as f:
+            config = json.load(f)
+            return {**DEFAULT_CONFIG, **config}
     except (json.JSONDecodeError, IOError):
         return DEFAULT_CONFIG
 
-def save_autoclicker_config(filepath: str, config: Dict[str, Any]) -> None:
-    """Serializes the autoclicker settings to a JSON file."""
+def save_config(config: Dict[str, Any], filepath: str = "config.json") -> None:
+    """Persist configuration to local JSON file."""
     try:
-        with open(filepath, 'w') as f:
+        with open(filepath, "w") as f:
             json.dump(config, f, indent=4)
     except IOError as e:
-        print(f"Failed to save configuration: {e}")
+        print(f"Failed to save config: {e}")
 
-def validate_config_values(config: Dict[str, Any]) -> bool:
-    """Ensures that settings fall within operational ranges."""
-    if config.get("interval", 0) < 0.001:
-        return False
-    if config.get("button") not in ["left", "right", "middle"]:
-        return False
-    return True
+if __name__ == "__main__":
+    # Example usage for verification
+    current_config = load_config()
+    print(f"Loaded config: {current_config}")
