@@ -1,20 +1,16 @@
 # python-utils-35
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
-
-`python-utils-35` is a high-performance, lightweight asynchronous autoclicker built purely in Python. Designed for automation tasks, it provides precise timing control and minimal CPU overhead through direct system API hooks.
+A high-performance, cross-platform autoclicker built in Python. This utility provides precise automation for repetitive mouse tasks with minimal system overhead.
 
 ## Features
-
-- **Sub-Millisecond Precision**: Leverages high-resolution performance counters to ensure consistent CPS (clicks per second) rates without thread sleeping drift.
-- **Configurable Patterns**: Supports fixed intervals, randomized human-like delays, and customizable burst firing to bypass basic rate-limiting detection.
-- **Global Hotkey Integration**: Easily toggle clicking states on the fly using customizable keyboard shortcuts without needing focus on the target window.
-- **Multi-Button Mapping**: Configure automated triggers for Left, Right, and Middle mouse buttons independently.
+*   **Customizable Intervals:** Set exact click speeds with support for millisecond-level precision.
+*   **Dynamic Triggering:** Bind clicking actions to specific hotkeys for seamless start/stop control.
+*   **Click Patterns:** Choose between single clicks, double-click bursts, or hold-to-click functionality.
+*   **Optimized Performance:** Uses low-level system hooks to ensure consistent performance even under heavy CPU load.
 
 ## Installation
 
-Ensure you have Python 3.8 or higher installed on your system. Clone the repository and install the required dependencies:
+Ensure you have [Python 3.8+](https://www.python.org/) installed. Clone the repository and install the required dependencies:
 
 ```bash
 git clone https://github.com/Developer/python-utils-35.git
@@ -22,32 +18,24 @@ cd python-utils-35
 pip install -r requirements.txt
 ```
 
-*(Note: Depending on your operating system, administrative privileges or accessibility permissions may be required for global input monitoring).*
-
 ## Usage
 
-Here is a basic script to run the autoclicker with a fixed interval of 50 milliseconds (20 CPS) toggled by the `F6` key.
+To start the autoclicker with default settings (10 clicks per second), execute the following command in your terminal:
 
-```python
-from utils35 import AutoClicker, MouseButton
-
-# Initialize the autoclicker
-# delay in seconds (0.05s = 50ms), targeting the left mouse button
-clicker = AutoClicker(
-    delay=0.05, 
-    button=MouseButton.LEFT, 
-    toggle_key="f6"
-)
-
-if __name__ == "__main__":
-    print("Autoclicker initialized. Press F6 to start/stop. Press Ctrl+C to exit.")
-    clicker.start()
+```bash
+python main.py --interval 0.1
 ```
 
-## Contributing
+You can customize the button behavior and hotkey via command-line arguments:
 
-Contributions are welcome! Please feel free to submit a Pull Request or open an issue for any bugs or feature requests.
+```bash
+# Set interval to 50ms and bind start/stop to the 'F6' key
+python main.py --interval 0.05 --hotkey 'f6'
+```
+
+Press `Ctrl+C` in the terminal to terminate the application safely at any time.
 
 ## License
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This project is open-source and available under the [MIT License](LICENSE).
+Distributed under the MIT License. See `LICENSE` for more information.
