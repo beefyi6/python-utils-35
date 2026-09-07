@@ -1,32 +1,38 @@
 import logging
-from logging.handlers import RotatingFileHandler
-import os
+import sys
+from typing import Optional
 
-def setup_logger(name: str, log_file: str = 'autoclicker.log') -> logging.Logger:
-    """Configures a rotating file logger for the application."""
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
+class ClickerLogger:
+    """Handles logging for the autoclicker application."""
 
-    # Prevent duplicate handlers if logger is re-initialized
-    if not logger.handlers:
-        # Format: timestamp - name - level - message
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-        # Rotate after 1MB, keep 3 backup files
-        file_handler = RotatingFileHandler(
-            log_file, 
-            maxBytes=1*1024*1024, 
-            backupCount=3
+    def __init__(self, name: str = "autoclicker", level: int = logging.INFO) -> None:
+        """Initialize the logger with a specific name and level."""
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(level)
+        
+        handler = logging.StreamHandler(sys.stdout)
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
+        handler.setFormatter(formatter)
+        
+        if not self.logger.handlers:
+            self.logger.addHandler(handler)
 
-        # Add console output for development visibility
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
+    def info(self, message: str) -> None:
+        """Log informational messages."""
+        self.logger.info(message)
 
-    return logger
+    def error(self, message: str, exc: Optional[Exception] = None) -> None:
+        """Log error messages with optional exception details."""
+        if exc:
+            self.logger.error(f"{message}: {exc}", exc_info=True)
+        else:
+            self.logger.error(message)
 
-# Default instance for the autoclicker module
-clicker_logger = setup_logger('autoclicker')
+    def debug(self, message: str) -> None:
+        """Log debug level messages."""
+        self.logger.debug(message)
+
+# Global instance for easy access across the package
+logger = ClickerLogger()
