@@ -1,54 +1,46 @@
-import time
 import random
-from functools import wraps
+import time
 
-def retry_network_operation(max_retries: int = 3, initial_delay: float = 1.0, backoff_factor: float = 2.0):
-    """Decorator that adds retry logic for network operations. Retries on common network exceptions with exponential backoff."""
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            attempt = 0
-            delay = initial_delay
-            while attempt <= max_retries:
-                try:
-                    return func(*args, **kwargs)
-                except (ConnectionError, TimeoutError, OSError) as exc:
-                    attempt += 1
-                    if attempt > max_retries:
-                        raise
-                    # Add jitter to avoid thundering herd
-                    jitter = random.uniform(0, 0.1) * delay
-                    time.sleep(delay + jitter)
-                    delay *= backoff_factor
-            # Unreachable
-            raise RuntimeError("Retry logic error")
-        return wrapper
-    return decorator
 
-# Example usage in context of utility for network calls
-@retry_network_operation(max_retries=4, initial_delay=0.2)
-def perform_network_request(endpoint: str, payload: dict = None) -> dict:
-    """Placeholder for actual network call, e.g., using requests or urllib. This would typically be an HTTP POST or GET."""
-    # Simulate variable network reliability
-    if random.random() < 0.8:
-        # Simulate success
-        return {"result": "ok", "endpoint": endpoint}
-    else:
-        # Simulate failure
-        raise ConnectionError(f"Failed to connect to {endpoint}")
+def calculate_jitter(interval: float, jitter_percent: float = 0.1) -> float:
+    """Calculate a randomized interval to simulate human clicking variation.
 
-def with_retry(max_retries: int = 3):
-    """Alternative simple retry wrapper."""
-    def inner(func):
-        @wraps(func)
-        def wrapped(*args, **kwargs):
-            for i in range(max_retries):
-                try:
-                    return func(*args, **kwargs)
-                except Exception:
-                    if i == max_retries - 1:
-                        raise
-                    time.sleep(1)
-            return None
-        return wrapped
-    return inner
+    :param interval: Base delay between clicks in seconds.
+    :param jitter_percent: Maximum percentage variation (0.0 to 1.0).
+    :return: Adjusted interval in seconds.
+    """
+    if interval <= 0:
+        return 0.0
+
+    variation = interval * max(0.0, min(jitter_percent, 1.0))
+    jittered = interval + random.uniform(-variation, variation)
+    return max(0.001, jittered)
+
+
+def cps_to_interval(cps: float) -> float:
+    """Convert clicks per second (CPS) to a time interval in seconds."""
+    if cps <= 0:
+        raise ValueError("Clicks per second must be greater than zero.")
+    return 1.0 / cps
+
+
+def clamp_cps(cps: float, min_cps: float = 0.1, max_cps: float = 500.0) -> float:
+    """Clamp CPS value within acceptable performance boundaries."""
+    return max(min_cps, min(cps, max_cps))
+
+
+def format_elapsed_time(seconds: float) -> str:
+    """Format total elapsed seconds into an HH:MM:SS string."""
+    seconds = int(seconds)
+    hours, remainder = divmod(seconds, 3600)
+    minutes, secs = divmod(remainder, 60)
+    return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
+
+def precise_sleep(duration: float) -> None:
+    """Perform high-precision sleep for tight autoclicker timing loops."""
+    target_time = time.perf_counter() + duration
+    while time.perf_counter() < target_time:
+        remaining = target_time - time.perf_counter()
+        if remaining > 0.002:
+            time.sleep(remaining - 0.001)
