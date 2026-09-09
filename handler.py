@@ -1,41 +1,34 @@
 import time
+import pyautogui
+from typing import Tuple, Optional
 
-def main_processing_loop():
-    """Main loop for handling autoclicker inputs with validation"""
-    click_count = 0
-    print("Autoclicker handler initialized")
-    while True:
-        user_input = input("Enter clicks (or 'quit' to stop): ").strip().lower()
-        if user_input == "quit":
-            print("Exiting main loop")
-            break
-        # Input validation
-        try:
-            num_clicks = int(user_input)
-            if num_clicks < 1 or num_clicks > 1000:
-                print("Error: Clicks must be between 1 and 1000")
-                continue
-        except ValueError:
-            print("Error: Please enter a valid integer")
-            continue
-        # Get interval with validation
-        interval_input = input("Enter interval seconds (0.1 to 10): ").strip()
-        try:
-            interval = float(interval_input)
-            if interval < 0.1 or interval > 10:
-                print("Error: Interval must be between 0.1 and 10")
-                continue
-        except ValueError:
-            print("Error: Please enter a valid number for interval")
-            continue
-        # Now the processing part of the loop
-        print(f"Processing {num_clicks} clicks at {interval}s interval")
-        for i in range(num_clicks):
-            # Simulate autoclick
-            print(f"  Click {i + 1} executed")
-            time.sleep(interval)
-        click_count += num_clicks
-        print(f"Total clicks so far: {click_count}")
+class ClickHandler:
+    """Handles automated mouse clicking operations with safety delays."""
 
-if __name__ == "__main__":
-    main_processing_loop()
+    def __init__(self, interval: float = 0.1, button: str = 'left') -> None:
+        """Initialize handler with click configuration."""
+        self.interval: float = interval
+        self.button: str = button
+
+    def execute_click(self, coordinates: Tuple[int, int]) -> bool:
+        """Perform a single click at the specified screen coordinates."""
+        try:
+            x, y = coordinates
+            pyautogui.click(x=x, y=y, button=self.button)
+            time.sleep(self.interval)
+            return True
+        except (pyautogui.FailSafeException, Exception):
+            return False
+
+    def execute_sequence(self, positions: list[Tuple[int, int]]) -> int:
+        """Perform a sequence of clicks across multiple coordinates."""
+        success_count: int = 0
+        for pos in positions:
+            if self.execute_click(pos):
+                success_count += 1
+        return success_count
+
+    def get_current_position(self) -> Tuple[int, int]:
+        """Retrieve the current mouse cursor location."""
+        x, y = pyautogui.position()
+        return (int(x), int(y))
