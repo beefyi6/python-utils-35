@@ -1,24 +1,36 @@
 import re
 
-def is_valid_click_speed(speed):
-    """Check if click speed is within allowable range."""
-    return isinstance(speed, (int, float)) and 0 < speed <= 10
+def validate_interval(value):
+    """Ensures click interval is a positive float."""
+    try:
+        f_val = float(value)
+        return f_val > 0
+    except (ValueError, TypeError):
+        return False
 
-def is_valid_click_count(count):
-    """Check if click count is a positive integer."""
-    return isinstance(count, int) and count > 0
+def validate_coordinates(x, y):
+    """Checks if coordinates are non-negative integers."""
+    try:
+        return int(x) >= 0 and int(y) >= 0
+    except (ValueError, TypeError):
+        return False
 
-def is_valid_hotkey(hotkey):
-    """Validate if the provided hotkey is in the correct format."""
-    pattern = re.compile(r'^[a-zA-Z0-9]+$')
-    return isinstance(hotkey, str) and pattern.match(hotkey)
+def validate_hotkey(key):
+    """Validates hotkey string format (simple alphanumeric)."""
+    if not isinstance(key, str):
+        return False
+    return bool(re.match(r'^[a-zA-Z0-9+]+$', key))
 
-def validate_settings(settings):
-    """Validate the settings for the autoclicker."""
-    if not is_valid_click_speed(settings.get('click_speed')):
-        raise ValueError('Invalid click speed')
-    if not is_valid_click_count(settings.get('click_count')):
-        raise ValueError('Invalid click count')
-    if not is_valid_hotkey(settings.get('hotkey')):
-        raise ValueError('Invalid hotkey')
-    return True
+def sanitize_input(user_input):
+    """Strips whitespace and standardizes input for processing."""
+    if not isinstance(user_input, str):
+        return ""
+    return user_input.strip().lower()
+
+def is_positive_integer(value):
+    """Verifies that a value is a valid positive integer."""
+    try:
+        val = int(value)
+        return val > 0
+    except (ValueError, TypeError):
+        return False
