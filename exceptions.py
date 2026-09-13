@@ -1,28 +1,30 @@
+from typing import Optional
+
 class AutoClickerError(Exception):
-    """Base exception for all auto-clicker related errors."""
+    """Base exception for all auto-clicker operations."""
     pass
 
-class CoordinateOutOfBoundsError(AutoClickerError):
-    """Raised when click coordinates fall outside screen bounds."""
-    def __init__(self, x, y):
-        super().__init__(f"Coordinates ({x}, {y}) are outside the valid screen area.")
-
-class ProcessNotFoundError(AutoClickerError):
-    """Raised when the target application process is missing."""
-    def __init__(self, process_name):
-        super().__init__(f"Target process '{process_name}' could not be found.")
-
-class PermissionDeniedError(AutoClickerError):
-    """Raised when lacking OS-level permissions for input simulation."""
-    def __init__(self, action):
-        super().__init__(f"Insufficient privileges to perform action: {action}.")
-
 class ConfigurationError(AutoClickerError):
-    """Raised when configuration settings are invalid or missing."""
-    def __init__(self, setting):
-        super().__init__(f"Invalid configuration detected for: {setting}.")
+    """Raised when the clicker configuration is invalid."""
+    def __init__(self, message: str, field: Optional[str] = None) -> None:
+        super().__init__(message)
+        self.field = field
 
-def raise_if_out_of_bounds(x, y, max_x, max_y):
-    """Validates screen coordinates against maximum display dimensions."""
-    if not (0 <= x <= max_x and 0 <= y <= max_y):
-        raise CoordinateOutOfBoundsError(x, y)
+class ClickExecutionError(AutoClickerError):
+    """Raised when a mouse or keyboard event fails."""
+    pass
+
+class InterruptionError(AutoClickerError):
+    """Raised when the execution is stopped by the user."""
+    pass
+
+def raise_if_invalid(condition: bool, message: str) -> None:
+    """Utility to trigger configuration errors if conditions are not met."""
+    if not condition:
+        raise ConfigurationError(message)
+
+class DeviceNotReadyError(AutoClickerError):
+    """Raised when input hardware is not responding."""
+    def __init__(self, device_id: int) -> None:
+        super().__init__(f"Device {device_id} is currently unavailable.")
+        self.device_id = device_id
