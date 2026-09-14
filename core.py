@@ -1,42 +1,39 @@
 import time
-import pyautogui
-import random
+import threading
+from typing import Callable, Optional
 
-def safe_click(x, y, interval=0.1):
-    """Perform a mouse click at coordinates with a small delay."""
-    pyautogui.moveTo(x, y)
-    time.sleep(interval)
-    pyautogui.click()
+class ClickEngine:
+    """Core autoclicker engine optimized for high-precision timing."""
 
-def random_jitter(x, y, radius=5):
-    """Add slight human-like randomization to click coordinates."""
-    x_offset = random.randint(-radius, radius)
-    y_offset = random.randint(-radius, radius)
-    return x + x_offset, y + y_offset
+    def __init__(self, interval: float = 0.01) -> None:
+        self.interval = max(0.001, interval)
+        self._running = False
+        self._thread: Optional[threading.Thread] = None
+        self._callback: Optional[Callable[[], None]] = None
 
-def perform_sequence(coordinates, delay=1.0):
-    """Execute a series of clicks based on a list of tuples."""
-    for x, y in coordinates:
-        jx, jy = random_jitter(x, y)
-        safe_click(jx, jy)
-        time.sleep(delay)
+    def set_callback(self, callback: Callable[[], None]) -> None:
+        self._callback = callback
 
-def get_screen_center():
-    """Return the center coordinates of the primary display."""
-    width, height = pyautogui.size()
-    return width // 2, height // 2
+    def start(self) -> None:
+        if self._running:
+            return
+        self._running = True
+        self._thread = threading.Thread(target=self._run_loop, daemon=True)
+        self._thread.start()
 
-def emergency_stop_check():
-    """Check for mouse at top-left corner as kill switch."""
-    x, y = pyautogui.position()
-    if x == 0 and y == 0:
-        raise InterruptedError("Emergency stop triggered at origin")
+    def stop(self) -> None:
+        self._running = False
+        if self._thread and self._thread.is_alive():
+            self._thread.join(timeout=1.0)
 
-if __name__ == "__main__":
-    # Example usage for autoclicker functionality
-    print("Starting click sequence...")
-    try:
-        center = get_screen_center()
-        perform_sequence([center, center])
-    except InterruptedError as e:
-        print(e)
+    def _run_loop(self) -> None:
+        next_time = time.perf_counter()
+        while self._running:
+            if self._callback:
+                self._callback()
+            next_time += self.interval
+            sleep_time = next_time - time.perf_counter()
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+            else:
+                next_time = time.perf_counter()
