@@ -1,39 +1,40 @@
-import random
+import pyautogui
+import logging
 import time
-from typing import Tuple
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-def calculate_jitter(
-    coords: Tuple[int, int], max_jitter: int = 3
-) -> Tuple[int, int]:
-    """Applies a small random offset to target coordinates to mimic human clicking."""
-    x, y = coords
-    jitter_x = random.randint(-max_jitter, max_jitter)
-    jitter_y = random.randint(-max_jitter, max_jitter)
-    return x + jitter_x, y + jitter_y
+def perform_click(x: int, y: int, interval: float = 0.1) -> bool:
+    """Performs a safe click operation with boundary checking."""
+    try:
+        screen_width, screen_height = pyautogui.size()
+        
+        if not (0 <= x <= screen_width and 0 <= y <= screen_height):
+            logger.error(f"Coordinates ({x}, {y}) outside screen bounds.")
+            return False
+            
+        pyautogui.click(x, y)
+        time.sleep(max(0, interval))
+        return True
+        
+    except pyautogui.FailSafeException:
+        logger.critical("Fail-safe triggered by user.")
+        return False
+    except Exception as e:
+        logger.error(f"Unexpected error during click: {e}")
+        return False
 
+def validate_coordinates(coords: tuple) -> bool:
+    """Ensures coordinates are valid numeric types."""
+    if not isinstance(coords, tuple) or len(coords) != 2:
+        return False
+    return all(isinstance(i, (int, float)) for i in coords)
 
-def sleep_with_variation(base_delay: float, variation: float = 0.1) -> None:
-    """Suspends execution for a base delay plus or minus a random variation."""
-    if base_delay <= 0:
-        return
-    min_delay = max(0.001, base_delay - variation)
-    max_delay = base_delay + variation
-    actual_delay = random.uniform(min_delay, max_delay)
-    time.sleep(actual_delay)
-
-
-class ClickRateLimiter:
-    """Utility to throttle clicking operations to a maximum clicks-per-second (CPS)."""
-
-    def __init__(self, max_cps: float):
-        self.interval = 1.0 / max_cps if max_cps > 0 else 0.0
-        self.last_click_time = 0.0
-
-    def wait_if_needed(self) -> None:
-        """Blocks progress if the click rate limit would be exceeded."""
-        current_time = time.perf_counter()
-        elapsed = current_time - self.last_click_time
-        if elapsed < self.interval:
-            time.sleep(self.interval - elapsed)
-        self.last_click_time = time.perf_counter()
+if __name__ == "__main__":
+    # Example usage with validation
+    target = (100, 200)
+    if validate_coordinates(target):
+        perform_click(*target)
+    else:
+        logger.warning("Invalid coordinate format provided.")
