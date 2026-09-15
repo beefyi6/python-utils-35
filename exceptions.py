@@ -1,30 +1,27 @@
-from typing import Optional
-
-class AutoClickerError(Exception):
-    """Base exception for all auto-clicker operations."""
+class AutoclickerError(Exception):
+    """Base exception for the application."""
     pass
 
-class ConfigurationError(AutoClickerError):
-    """Raised when the clicker configuration is invalid."""
-    def __init__(self, message: str, field: Optional[str] = None) -> None:
-        super().__init__(message)
-        self.field = field
-
-class ClickExecutionError(AutoClickerError):
-    """Raised when a mouse or keyboard event fails."""
+class ConfigurationError(AutoclickerError):
+    """Raised when config validation fails."""
     pass
 
-class InterruptionError(AutoClickerError):
-    """Raised when the execution is stopped by the user."""
+class ClickerRuntimeError(AutoclickerError):
+    """Raised during click execution failures."""
     pass
 
-def raise_if_invalid(condition: bool, message: str) -> None:
-    """Utility to trigger configuration errors if conditions are not met."""
-    if not condition:
-        raise ConfigurationError(message)
+class DeviceNotFoundError(AutoclickerError):
+    """Raised when input devices are unreachable."""
+    pass
 
-class DeviceNotReadyError(AutoClickerError):
-    """Raised when input hardware is not responding."""
-    def __init__(self, device_id: int) -> None:
-        super().__init__(f"Device {device_id} is currently unavailable.")
-        self.device_id = device_id
+def raise_if_none(value, message, exception_type=AutoclickerError):
+    """Helper to enforce non-null arguments."""
+    if value is None:
+        raise exception_type(message)
+    return value
+
+def validate_coordinate(x, y):
+    """Ensures screen coordinates are non-negative."""
+    if x < 0 or y < 0:
+        raise ConfigurationError(f"Invalid coordinates: ({x}, {y})")
+    return True
