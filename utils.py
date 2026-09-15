@@ -1,40 +1,45 @@
-import pyautogui
-import logging
 import time
+import random
+import logging
+from typing import Callable, TypeVar, Any, Tuple, Type
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("autoclicker.utils")
 
-def perform_click(x: int, y: int, interval: float = 0.1) -> bool:
-    """Performs a safe click operation with boundary checking."""
-    try:
-        screen_width, screen_height = pyautogui.size()
-        
-        if not (0 <= x <= screen_width and 0 <= y <= screen_height):
-            logger.error(f"Coordinates ({x}, {y}) outside screen bounds.")
-            return False
-            
-        pyautogui.click(x, y)
-        time.sleep(max(0, interval))
-        return True
-        
-    except pyautogui.FailSafeException:
-        logger.critical("Fail-safe triggered by user.")
-        return False
-    except Exception as e:
-        logger.error(f"Unexpected error during click: {e}")
-        return False
+T = TypeVar("T")
 
-def validate_coordinates(coords: tuple) -> bool:
-    """Ensures coordinates are valid numeric types."""
-    if not isinstance(coords, tuple) or len(coords) != 2:
-        return False
-    return all(isinstance(i, (int, float)) for i in coords)
-
-if __name__ == "__main__":
-    # Example usage with validation
-    target = (100, 200)
-    if validate_coordinates(target):
-        perform_click(*target)
-    else:
-        logger.warning("Invalid coordinate format provided.")
+def retry_network_op(
+    retries: int = 3,
+    backoff_factor: float = 0.5,
+    exceptions_to_check: Tuple[Type[BaseException], ...] = (Exception,),
+) -> Callable[[Callable[..., T]], Callable[..., T]]:
+    """
+    Decorator that retries a network operation with exponential backoff.
+    
+    :param retries: Maximum number of retry attempts.
+    :param backoff_factor: Multiplier for exponential backoff delay.
+    :param exceptions_to_check: Tuple of exceptions that trigger a retry.
+    """
+    def decorator(func: Callable[..., T]) -> Callable[..., T]:
+        def wrapper(*args: Any, **kwargs: Any) -> T:
+            attempt = 0
+            while True:
+                try:
+                    return func(*args, **kwargs)
+                except exceptions_to_check as e:
+                    attempt += 1
+                    if attempt > retries:
+                        logger.error(
+                            f"Operation '{func.__name__}' failed after {retries} retries. "
+                            f"Error: {e}"
+                        )
+                        raise e
+                    
+                    # Exponential backoff with jitter
+                    delay = backoff_factor * (2 ** (attempt - 1)) + random.uniform(0, 0.1)
+                    logger.warning(
+                        f"Network exception '{e}' during '{func.__name__}'. "
+                        f"Retrying attempt {attempt}/{retries} in {delay:.2f}s..."
+                    )
+                    time.sleep(delay)
+        return wrapper
+    return decorator
