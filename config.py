@@ -1,55 +1,36 @@
-import json
 import os
-from typing import Any, Dict
+import json
+import logging
 
+# Default configuration for autoclicker
 DEFAULT_CONFIG = {
-    "click_delay": 0.1,
-    "mouse_button": "left",
-    "start_hotkey": "f1",
-    "stop_hotkey": "f2",
-    "max_clicks": 0,
-    "random_delay_range": [0.0, 0.0]
+    "interval": 0.1,
+    "button": "left",
+    "max_clicks": 1000
 }
 
-class ConfigLoader:
-    def __init__(self, filepath: str = "config.json"):
-        self.filepath = filepath
-        self.config = self.load()
+def load_config(filepath):
+    """Load configuration with strict error validation."""
+    if not os.path.exists(filepath):
+        logging.warning("Config file not found, creating default.")
+        return DEFAULT_CONFIG
 
-    def load(self) -> Dict[str, Any]:
-        """Loads configuration from JSON file, creating it with defaults if missing."""
-        if not os.path.exists(self.filepath):
-            self._save_defaults()
-            return DEFAULT_CONFIG.copy()
-        
-        try:
-            with open(self.filepath, "r", encoding="utf-8") as f:
-                user_config = json.load(f)
-            # Merge user config with defaults to ensure all keys exist
-            loaded_config = DEFAULT_CONFIG.copy()
-            loaded_config.update(user_config)
-            return loaded_config
-        except (json.JSONDecodeError, OSError):
-            # Fallback to defaults in case of corrupt file
-            return DEFAULT_CONFIG.copy()
+    try:
+        with open(filepath, 'r') as f:
+            data = json.load(f)
+            # Validate structure
+            if not isinstance(data, dict):
+                raise ValueError("Invalid config format")
+            return {**DEFAULT_CONFIG, **data}
+    except (json.JSONDecodeError, PermissionError, ValueError) as e:
+        logging.error(f"Failed to load config: {e}. Using defaults.")
+        return DEFAULT_CONFIG
 
-    def _save_defaults(self) -> None:
-        """Saves default configuration to the file."""
-        try:
-            with open(self.filepath, "w", encoding="utf-8") as f:
-                json.dump(DEFAULT_CONFIG, f, indent=4)
-        except OSError:
-            pass
-
-    def get(self, key: str) -> Any:
-        """Gets a configuration value, returning default if missing."""
-        return self.config.get(key, DEFAULT_CONFIG.get(key))
-
-    def update(self, key: str, value: Any) -> None:
-        """Updates a specific configuration option and saves it."""
-        self.config[key] = value
-        try:
-            with open(self.filepath, "w", encoding="utf-8") as f:
-                json.dump(self.config, f, indent=4)
-        except OSError:
-            pass
+def save_config(filepath, config_data):
+    """Save configuration to file with error handling."""
+    try:
+        with open(filepath, 'w') as f:
+            json.dump(config_data, f, indent=4)
+    except (IOError, TypeError) as e:
+        logging.error(f"Critical error saving configuration: {e}")
+        raise RuntimeError("Configuration persistence failed") from e
