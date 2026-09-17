@@ -1,38 +1,33 @@
 import logging
-from logging.handlers import RotatingFileHandler
+import sys
 import os
 
-def setup_logger(name: str, log_file: str = 'autoclicker.log', level: int = logging.INFO) -> logging.Logger:
-    """
-    Configures a rotating file logger for the application.
-    Max file size is 5MB with 3 backup files kept.
-    """
+def setup_logger(name: str = 'autoclicker', log_file: str = 'app.log'):
+    """Configures a robust logger with file rotation and error handling."""
     logger = logging.getLogger(name)
-    logger.setLevel(level)
+    logger.setLevel(logging.DEBUG)
 
-    # Prevent duplicate handlers if logger is initialized multiple times
-    if not logger.handlers:
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    try:
         # Ensure log directory exists
         log_dir = os.path.dirname(log_file)
         if log_dir and not os.path.exists(log_dir):
             os.makedirs(log_dir)
 
-        # Rotating file handler: 5MB per file, max 3 backups
-        handler = RotatingFileHandler(
-            log_file, 
-            maxBytes=5*1024*1024, 
-            backupCount=3
-        )
-        
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
+        # File handler with error resilience
+        file_handler = logging.FileHandler(log_file, mode='a')
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
 
-        # Add console output for debugging purposes
-        console = logging.StreamHandler()
-        console.setFormatter(formatter)
-        logger.addHandler(console)
+    except (OSError, IOError) as e:
+        # Fallback to console if file system is inaccessible
+        console_handler = logging.StreamHandler(sys.stderr)
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+        logger.error(f"failed to initialize file logger: {e}")
 
     return logger
+
+# Global logger instance for the application
+logger = setup_logger()
