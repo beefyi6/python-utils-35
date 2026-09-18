@@ -1,33 +1,40 @@
-import logging
-import sys
 import os
+import logging
+from logging.handlers import RotatingFileHandler
 
-def setup_logger(name: str = 'autoclicker', log_file: str = 'app.log'):
-    """Configures a robust logger with file rotation and error handling."""
+def setup_logger(name: str = "autoclicker", log_file: str = "autoclicker.log", level: int = logging.INFO) -> logging.Logger:
+    """
+    Configures and returns a logger with console and rotating file handlers.
+    """
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(level)
 
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    if logger.hasHandlers():
+        return logger
+
+    log_dir = os.path.dirname(log_file)
+    if log_dir and not os.path.exists(log_dir):
+        os.makedirs(log_dir, exist_ok=True)
+
+    formatter = logging.Formatter(
+        fmt="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
+
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
 
     try:
-        # Ensure log directory exists
-        log_dir = os.path.dirname(log_file)
-        if log_dir and not os.path.exists(log_dir):
-            os.makedirs(log_dir)
-
-        # File handler with error resilience
-        file_handler = logging.FileHandler(log_file, mode='a')
+        file_handler = RotatingFileHandler(
+            log_file,
+            maxBytes=5 * 1024 * 1024,
+            backupCount=3,
+            encoding="utf-8"
+        )
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
-
-    except (OSError, IOError) as e:
-        # Fallback to console if file system is inaccessible
-        console_handler = logging.StreamHandler(sys.stderr)
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
-        logger.error(f"failed to initialize file logger: {e}")
+    except (OSError, PermissionError) as e:
+        logger.warning("Failed to initialize rotating file handler: %s", e)
 
     return logger
-
-# Global logger instance for the application
-logger = setup_logger()
