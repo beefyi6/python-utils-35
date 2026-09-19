@@ -1,34 +1,44 @@
 import time
-import pyautogui
-from typing import Tuple, Optional
+import urllib.request
+import urllib.error
+import json
+import logging
 
-class ClickHandler:
-    """Handles automated mouse clicking operations with safety delays."""
+logger = logging.getLogger("autoclicker.handler")
 
-    def __init__(self, interval: float = 0.1, button: str = 'left') -> None:
-        """Initialize handler with click configuration."""
-        self.interval: float = interval
-        self.button: str = button
+class NetworkHandler:
+    """Handles network requests for autoclicker configurations and coordinates with retries."""
 
-    def execute_click(self, coordinates: Tuple[int, int]) -> bool:
-        """Perform a single click at the specified screen coordinates."""
-        try:
-            x, y = coordinates
-            pyautogui.click(x=x, y=y, button=self.button)
-            time.sleep(self.interval)
-            return True
-        except (pyautogui.FailSafeException, Exception):
-            return False
+    def __init__(self, base_url: str, max_retries: int = 3, backoff_factor: float = 1.5):
+        self.base_url = base_url.rstrip('/')
+        self.max_retries = max_retries
+        self.backoff_factor = backoff_factor
 
-    def execute_sequence(self, positions: list[Tuple[int, int]]) -> int:
-        """Perform a sequence of clicks across multiple coordinates."""
-        success_count: int = 0
-        for pos in positions:
-            if self.execute_click(pos):
-                success_count += 1
-        return success_count
+    def fetch_coordinates(self, endpoint: str) -> dict:
+        """
+        Fetches remote clicking path configurations using exponential backoff.
+        Prevents transient network blips from stopping the autoclicker daemon.
+        """
+        url = f"{self.base_url}/{endpoint.lstrip('/')}"
+        delay = 1.0
 
-    def get_current_position(self) -> Tuple[int, int]:
-        """Retrieve the current mouse cursor location."""
-        x, y = pyautogui.position()
-        return (int(x), int(y))
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                logger.info(f"Attempt {attempt}/{self.max_retries} fetching from: {url}")
+                req = urllib.request.Request(
+                    url,
+                    headers={"User-Agent": "Python-Autoclicker-Utils/3.5"}
+                )
+                with urllib.request.urlopen(req, timeout=5) as response:
+                    if response.status == 200:
+                        return json.loads(response.read().decode('utf-8'))
+            except (urllib.error.URLError, urllib.error.HTTPError) as err:
+                logger.warning(f"Attempt {attempt} failed: {err}")
+                if attempt == self.max_retries:
+                    logger.error("Network request failed after maximum retries.")
+                    raise err
+                
+                time.sleep(delay)
+                delay *= self.backoff_factor
+
+        raise RuntimeError("Failed to resolve coordinates fetch operational state.")
