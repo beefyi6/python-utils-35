@@ -1,31 +1,29 @@
 import time
-import sys
+import random
+import pyautogui
 
-def precise_sleep(duration: float) -> None:
-    """
-    Suspends execution with high precision for the specified duration.
-    Combines standard sleep with spin-locking for sub-millisecond accuracy.
-    """
-    if duration <= 0:
-        return
-        
-    start_time = time.perf_counter()
-    target_time = start_time + duration
-    
-    # Use standard sleep for the bulk of the duration to save CPU
-    remaining = duration
-    while remaining > 0.015:
-        time.sleep(remaining - 0.01)
-        remaining = target_time - time.perf_counter()
-        
-    # Active spin-locking for high-precision remainder
-    while time.perf_counter() < target_time:
-        pass
+def safe_click(x: int, y: int, interval: float = 0.1):
+    """Move mouse to coordinates and perform a click."""
+    pyautogui.moveTo(x, y)
+    time.sleep(interval)
+    pyautogui.click()
 
-def calculate_intervals(clicks_per_second: float) -> float:
-    """
-    Calculates the exact delay interval needed between clicks.
-    """
-    if clicks_per_second <= 0:
-        return 0.1
-    return 1.0 / clicks_per_second
+def random_delay(min_sec: float, max_sec: float):
+    """Sleep for a random duration between specified bounds."""
+    delay = random.uniform(min_sec, max_sec)
+    time.sleep(delay)
+
+def get_screen_center():
+    """Return the center coordinates of the primary display."""
+    width, height = pyautogui.size()
+    return width // 2, height // 2
+
+def drag_to(start_x: int, start_y: int, end_x: int, end_y: int, duration: float = 0.5):
+    """Perform a smooth drag operation between two points."""
+    pyautogui.moveTo(start_x, start_y)
+    pyautogui.dragTo(end_x, end_y, duration=duration, button='left')
+
+def is_pixel_color(x: int, y: int, target_rgb: tuple, tolerance: int = 10):
+    """Check if pixel at location matches target RGB within tolerance."""
+    current_color = pyautogui.pixel(x, y)
+    return all(abs(c1 - c2) <= tolerance for c1, c2 in zip(current_color, target_rgb))
