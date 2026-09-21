@@ -1,44 +1,37 @@
 import time
-import urllib.request
-import urllib.error
-import json
-import logging
+import threading
+from typing import Optional
 
-logger = logging.getLogger("autoclicker.handler")
+class ClickHandler:
+    """Manages execution state and timing for autoclicker tasks."""
+    def __init__(self, interval: float = 0.1):
+        self.interval = interval
+        self.running = False
+        self._lock = threading.Lock()
 
-class NetworkHandler:
-    """Handles network requests for autoclicker configurations and coordinates with retries."""
+    def start(self) -> None:
+        """Starts the execution loop if not already running."""
+        with self._lock:
+            if not self.running:
+                self.running = True
+                threading.Thread(target=self._run_loop, daemon=True).start()
 
-    def __init__(self, base_url: str, max_retries: int = 3, backoff_factor: float = 1.5):
-        self.base_url = base_url.rstrip('/')
-        self.max_retries = max_retries
-        self.backoff_factor = backoff_factor
+    def stop(self) -> None:
+        """Signals the execution loop to terminate."""
+        with self._lock:
+            self.running = False
 
-    def fetch_coordinates(self, endpoint: str) -> dict:
-        """
-        Fetches remote clicking path configurations using exponential backoff.
-        Prevents transient network blips from stopping the autoclicker daemon.
-        """
-        url = f"{self.base_url}/{endpoint.lstrip('/')}"
-        delay = 1.0
+    def _run_loop(self) -> None:
+        """Internal loop executing click actions."""
+        while self.running:
+            self._perform_click()
+            time.sleep(self.interval)
 
-        for attempt in range(1, self.max_retries + 1):
-            try:
-                logger.info(f"Attempt {attempt}/{self.max_retries} fetching from: {url}")
-                req = urllib.request.Request(
-                    url,
-                    headers={"User-Agent": "Python-Autoclicker-Utils/3.5"}
-                )
-                with urllib.request.urlopen(req, timeout=5) as response:
-                    if response.status == 200:
-                        return json.loads(response.read().decode('utf-8'))
-            except (urllib.error.URLError, urllib.error.HTTPError) as err:
-                logger.warning(f"Attempt {attempt} failed: {err}")
-                if attempt == self.max_retries:
-                    logger.error("Network request failed after maximum retries.")
-                    raise err
-                
-                time.sleep(delay)
-                delay *= self.backoff_factor
+    def _perform_click(self) -> None:
+        """Placeholder for low-level click injection logic."""
+        # Integration point for system input libraries
+        pass
 
-        raise RuntimeError("Failed to resolve coordinates fetch operational state.")
+    def update_interval(self, new_interval: float) -> None:
+        """Updates the click rate dynamically."""
+        self.interval = max(0.01, new_interval)
