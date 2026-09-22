@@ -1,29 +1,28 @@
 import time
-import random
 import pyautogui
+import random
 
-def safe_click(x: int, y: int, interval: float = 0.1):
-    """Move mouse to coordinates and perform a click."""
+def safe_click(x, y, interval=0.1):
+    """Performs a click with a randomized delay to avoid detection."""
     pyautogui.moveTo(x, y)
-    time.sleep(interval)
+    time.sleep(random.uniform(0.05, interval))
     pyautogui.click()
 
-def random_delay(min_sec: float, max_sec: float):
-    """Sleep for a random duration between specified bounds."""
-    delay = random.uniform(min_sec, max_sec)
-    time.sleep(delay)
+def drag_to(x1, y1, x2, y2, duration=0.5):
+    """Executes a mouse drag operation between two points."""
+    pyautogui.moveTo(x1, y1)
+    pyautogui.dragTo(x2, y2, duration=duration, button='left')
 
 def get_screen_center():
-    """Return the center coordinates of the primary display."""
+    """Calculates the center of the primary display."""
     width, height = pyautogui.size()
     return width // 2, height // 2
 
-def drag_to(start_x: int, start_y: int, end_x: int, end_y: int, duration: float = 0.5):
-    """Perform a smooth drag operation between two points."""
-    pyautogui.moveTo(start_x, start_y)
-    pyautogui.dragTo(end_x, end_y, duration=duration, button='left')
+def human_pause(min_sec=0.5, max_sec=2.0):
+    """Introduces a random delay to simulate human behavior."""
+    time.sleep(random.uniform(min_sec, max_sec))
 
-def is_pixel_color(x: int, y: int, target_rgb: tuple, tolerance: int = 10):
-    """Check if pixel at location matches target RGB within tolerance."""
-    current_color = pyautogui.pixel(x, y)
-    return all(abs(c1 - c2) <= tolerance for c1, c2 in zip(current_color, target_rgb))
+def validate_bounds(x, y):
+    """Ensures coordinates are within screen dimensions."""
+    width, height = pyautogui.size()
+    return 0 <= x < width and 0 <= y < height
