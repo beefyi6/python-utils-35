@@ -1,47 +1,37 @@
+import random
 import time
-import logging
-from typing import Tuple, Optional
-
-logger = logging.getLogger(__name__)
-
-def validate_click_interval(interval: float) -> float:
-    """Validate and sanitize click interval in seconds."""
-    try:
-        val = float(interval)
-        if val < 0.001:
-            logger.warning("Interval %s too small, clamping to 0.001s", interval)
-            return 0.001
-        if val > 3600.0:
-            logger.warning("Interval %s exceeds 1 hour limit, clamping to 3600s", interval)
-            return 3600.0
-        return val
-    except (ValueError, TypeError) as err:
-        logger.error("Invalid interval type or value: %s (%s)", interval, err)
-        raise ValueError(f"Click interval must be a valid number: {interval}") from err
+from typing import Tuple
 
 
-def clamp_coordinates(x: int, y: int, screen_bounds: Tuple[int, int, int, int]) -> Tuple[int, int]:
-    """Ensure target click coordinates stay within specified screen bounds."""
-    min_x, min_y, max_x, max_y = screen_bounds
-    
-    if min_x > max_x or min_y > max_y:
-        raise ValueError(f"Invalid screen bounds geometry: {screen_bounds}")
-        
-    clamped_x = max(min_x, min(int(x), max_x))
-    clamped_y = max(min_y, min(int(y), max_y))
-    
-    if (clamped_x, clamped_y) != (x, y):
-        logger.debug("Coordinates (%s, %s) clamped to (%s, %s)", x, y, clamped_x, clamped_y)
-        
-    return clamped_x, clamped_y
+def calculate_jitter_location(
+    x: int, y: int, radius: int = 3
+) -> Tuple[int, int]:
+    """Apply a small random Gaussian offset to coordinates to mimic human movement."""
+    jitter_x = int(random.gauss(x, radius / 2))
+    jitter_y = int(random.gauss(y, radius / 2))
+    return jitter_x, jitter_y
 
 
-def safe_delay(seconds: float) -> bool:
-    """Perform a sleep delay with error handling for unexpected values."""
-    try:
-        delay = validate_click_interval(seconds)
-        time.sleep(delay)
-        return True
-    except Exception as err:
-        logger.error("Failed to execute safe delay: %s", err)
-        return False
+def get_random_delay(base_cps: float, variation: float = 0.2) -> float:
+    """Calculate a randomized delay in seconds based on target clicks per second (CPS)."""
+    if base_cps <= 0:
+        raise ValueError("CPS must be greater than zero")
+
+    target_delay = 1.0 / base_cps
+    min_delay = max(0.001, target_delay * (1.0 - variation))
+    max_delay = target_delay * (1.0 + variation)
+
+    return random.uniform(min_delay, max_delay)
+
+
+def is_within_bounds(
+    x: int, y: int, screen_width: int, screen_height: int
+) -> bool:
+    """Check if the given coordinates fall within the specified screen bounds."""
+    return 0 <= x < screen_width and 0 <= y < screen_height
+
+
+def sleep_with_jitter(base_cps: float, variation: float = 0.2) -> None:
+    """Block execution for a randomized delay corresponding to the desired CPS."""
+    delay = get_random_delay(base_cps, variation)
+    time.sleep(delay)
