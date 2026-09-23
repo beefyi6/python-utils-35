@@ -1,36 +1,35 @@
 import logging
-import sys
-from datetime import datetime
+from logging.handlers import RotatingFileHandler
+import os
 
-def get_logger(name: str) -> logging.Logger:
-    """Configures a standard logger for the autoclicker."""
+def setup_logger(name: str, log_file: str = 'autoclicker.log') -> logging.Logger:
+    """
+    Configures a rotating file logger for the application.
+    Limits file size to 1MB and keeps 3 backups.
+    """
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
 
+    # Prevent duplicate handlers if function is called multiple times
     if not logger.handlers:
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        # Format: timestamp - logger name - level - message
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+        # Rotate log file after 1MB, keep 3 backup files
+        handler = RotatingFileHandler(
+            log_file, 
+            maxBytes=1*1024*1024, 
+            backupCount=3
         )
-        
-        console_handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+
+        # Optional: Log to console as well
+        console_handler = logging.StreamHandler()
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
 
-        log_filename = f"autoclicker_{datetime.now().strftime('%Y-%m-%d')}.log"
-        file_handler = logging.FileHandler(log_filename)
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
-
     return logger
 
-def log_event(logger: logging.Logger, message: str, level: str = "info"):
-    """Helper to route messages to appropriate log levels."""
-    levels = {
-        "info": logger.info,
-        "warning": logger.warning,
-        "error": logger.error,
-        "debug": logger.debug
-    }
-    
-    log_func = levels.get(level.lower(), logger.info)
-    log_func(message)
+# Instantiate standard application logger
+autoclicker_logger = setup_logger('autoclicker')
