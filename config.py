@@ -1,5 +1,6 @@
 import json
 import os
+from typing import Any, Dict
 
 DEFAULT_CONFIG = {
     "interval": 0.1,
@@ -8,12 +9,13 @@ DEFAULT_CONFIG = {
     "hotkey": "f6"
 }
 
-def load_config(filepath: str = "config.json") -> dict:
-    """Loads configuration from file with fallback to defaults."""
+def load_config(filepath: str = "config.json") -> Dict[str, Any]:
+    """
+    Loads configuration from a JSON file or returns defaults if missing.
+    """
     config = DEFAULT_CONFIG.copy()
-    
+
     if not os.path.exists(filepath):
-        save_config(config, filepath)
         return config
 
     try:
@@ -25,10 +27,12 @@ def load_config(filepath: str = "config.json") -> dict:
 
     return config
 
-def save_config(config: dict, filepath: str = "config.json") -> None:
-    """Saves current configuration state to JSON file."""
+def save_config(config: Dict[str, Any], filepath: str = "config.json") -> None:
+    """
+    Persists current configuration to a JSON file.
+    """
     try:
         with open(filepath, "w") as f:
             json.dump(config, f, indent=4)
-    except IOError as e:
-        print(f"Failed to save configuration: {e}")
+    except IOError:
+        pass
