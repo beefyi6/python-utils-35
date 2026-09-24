@@ -1,35 +1,35 @@
 import logging
-from logging.handlers import RotatingFileHandler
 import os
+from logging.handlers import RotatingFileHandler
 
 def setup_logger(name: str, log_file: str = 'autoclicker.log') -> logging.Logger:
-    """
-    Configures a rotating file logger for the application.
-    Limits file size to 1MB and keeps 3 backups.
-    """
+    """Configures a rotating file logger for the autoclicker."""
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
 
     # Prevent duplicate handlers if function is called multiple times
     if not logger.handlers:
-        # Format: timestamp - logger name - level - message
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        # Ensure log directory exists
+        log_dir = os.path.dirname(log_file)
+        if log_dir and not os.path.exists(log_dir):
+            os.makedirs(log_dir)
 
-        # Rotate log file after 1MB, keep 3 backup files
+        # Rotation: 1MB per file, keep 3 backup files
         handler = RotatingFileHandler(
             log_file, 
             maxBytes=1*1024*1024, 
             backupCount=3
         )
+        
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 
-        # Optional: Log to console as well
+        # Also output to console for better visibility
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
 
     return logger
-
-# Instantiate standard application logger
-autoclicker_logger = setup_logger('autoclicker')
