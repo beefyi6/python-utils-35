@@ -1,55 +1,53 @@
-import logging
 import os
+import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from typing import Optional
+
+LOG_DIR = Path("logs")
+LOG_FILE = LOG_DIR / "autoclicker.log"
+DEFAULT_FORMAT = "%(asctime)s - %(name)s - [%(levelname)s] - %(message)s"
+
 
 def setup_logger(
     name: str = "autoclicker",
-    log_file: str = "logs/autoclicker.log",
-    max_bytes: int = 2 * 1024 * 1024,  # 2 MB
+    log_file: Optional[Path] = None,
+    level: int = logging.INFO,
+    max_bytes: int = 1_048_576,  # 1 MB log limit
     backup_count: int = 5,
-    level: int = logging.INFO
 ) -> logging.Logger:
-    """
-    Configures and returns a logger with both console and rotating file handlers.
-    Prevents duplicate handler registrations on repeated calls.
-    """
+    """Configure and return a logger instance with rotating file and stream handlers."""
+    target_file = log_file or LOG_FILE
+    target_file.parent.mkdir(parents=True, exist_ok=True)
+
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
-    # Avoid adding handlers multiple times if logger is already configured
-    if logger.handlers:
-        return logger
+    # Clear handlers to avoid duplicated log entries on re-initialization
+    if logger.hasHandlers():
+        logger.handlers.clear()
 
-    # Ensure target directory for logs exists
-    log_path = Path(log_file)
-    if log_path.parent:
-        log_path.parent.mkdir(parents=True, exist_ok=True)
+    formatter = logging.Formatter(DEFAULT_FORMAT)
 
-    # Define log message format
-    formatter = logging.Formatter(
-        fmt="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+    # File rotation prevents log inflation during high-frequency clicking
+    file_handler = RotatingFileHandler(
+        target_file,
+        maxBytes=max_bytes,
+        backupCount=backup_count,
+        encoding="utf-8",
     )
+    file_handler.setLevel(level)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
 
-    # Console output handler
+    # Console output handler for live execution monitoring
     console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
     console_handler.setLevel(level)
+    console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
 
-    # Rotating file handler for persistent execution logs
-    try:
-        file_handler = RotatingFileHandler(
-            filename=log_path,
-            maxBytes=max_bytes,
-            backupCount=backup_count,
-            encoding="utf-8"
-        )
-        file_handler.setFormatter(formatter)
-        file_handler.setLevel(level)
-        logger.addHandler(file_handler)
-    except (OSError, PermissionError) as err:
-        logger.warning(f"File logging disabled, unable to write to {log_file}: {err}")
-
     return logger
+
+
+# Shared instance for application-wide click event logging
+click_logger = setup_logger()
