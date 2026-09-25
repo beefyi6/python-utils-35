@@ -1,35 +1,55 @@
 import logging
 import os
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
-def setup_logger(name: str, log_file: str = 'autoclicker.log') -> logging.Logger:
-    """Configures a rotating file logger for the autoclicker."""
+def setup_logger(
+    name: str = "autoclicker",
+    log_file: str = "logs/autoclicker.log",
+    max_bytes: int = 2 * 1024 * 1024,  # 2 MB
+    backup_count: int = 5,
+    level: int = logging.INFO
+) -> logging.Logger:
+    """
+    Configures and returns a logger with both console and rotating file handlers.
+    Prevents duplicate handler registrations on repeated calls.
+    """
     logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(level)
 
-    # Prevent duplicate handlers if function is called multiple times
-    if not logger.handlers:
-        # Ensure log directory exists
-        log_dir = os.path.dirname(log_file)
-        if log_dir and not os.path.exists(log_dir):
-            os.makedirs(log_dir)
+    # Avoid adding handlers multiple times if logger is already configured
+    if logger.handlers:
+        return logger
 
-        # Rotation: 1MB per file, keep 3 backup files
-        handler = RotatingFileHandler(
-            log_file, 
-            maxBytes=1*1024*1024, 
-            backupCount=3
+    # Ensure target directory for logs exists
+    log_path = Path(log_file)
+    if log_path.parent:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Define log message format
+    formatter = logging.Formatter(
+        fmt="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
+
+    # Console output handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    console_handler.setLevel(level)
+    logger.addHandler(console_handler)
+
+    # Rotating file handler for persistent execution logs
+    try:
+        file_handler = RotatingFileHandler(
+            filename=log_path,
+            maxBytes=max_bytes,
+            backupCount=backup_count,
+            encoding="utf-8"
         )
-        
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-
-        # Also output to console for better visibility
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
+        file_handler.setFormatter(formatter)
+        file_handler.setLevel(level)
+        logger.addHandler(file_handler)
+    except (OSError, PermissionError) as err:
+        logger.warning(f"File logging disabled, unable to write to {log_file}: {err}")
 
     return logger
