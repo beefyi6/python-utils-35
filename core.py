@@ -1,36 +1,39 @@
 import time
-import threading
-from typing import Callable
+import logging
+import pyautogui
 
-class ClickEngine:
-    """High-performance autoclicker engine utilizing event polling."""
-    def __init__(self, interval: float = 0.01):
-        self.interval = interval
-        self.running = False
-        self._lock = threading.Lock()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('autoclicker')
 
-    def start_clicking(self, action: Callable[[], None]) -> None:
-        """Executes action loop with high-precision timing."""
-        self.running = True
-        last_time = time.perf_counter()
-
-        while self.running:
-            # Use performance counter for sub-millisecond accuracy
-            current_time = time.perf_counter()
-            elapsed = current_time - last_time
+def perform_click(x: int, y: int, interval: float):
+    """Executes mouse click with coordinate and boundary validation."""
+    try:
+        screen_width, screen_height = pyautogui.size()
+        
+        if not (0 <= x <= screen_width and 0 <= y <= screen_height):
+            raise ValueError(f"Coordinates ({x}, {y}) out of screen bounds")
             
-            if elapsed >= self.interval:
-                action()
-                last_time = current_time
-            else:
-                # Yield CPU slightly to prevent thread starvation
-                time.sleep(max(0, self.interval - elapsed) * 0.5)
+        if interval < 0:
+            raise ValueError("Click interval must be a non-negative number")
 
-    def stop(self) -> None:
-        """Graceful shutdown of engine execution."""
-        with self._lock:
-            self.running = False
+        pyautogui.click(x, y)
+        time.sleep(interval)
+        
+    except pyautogui.FailSafeException:
+        logger.error("Fail-safe triggered: stopping clicker")
+        raise
+    except ValueError as e:
+        logger.error(f"Invalid input parameters: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error during click execution: {e}")
 
-# Optimized configuration constants
-POLLING_RATE_LIMIT = 0.001
-THREAD_SAFETY_ENABLED = True
+def run_autoclicker(target_coords: list, iterations: int, delay: float):
+    """Orchestrates multiple clicks with iteration safety."""
+    if not target_coords:
+        logger.warning("No coordinates provided for clicking")
+        return
+
+    for i in range(iterations):
+        for x, y in target_coords:
+            perform_click(x, y, delay)
+            logger.info(f"Completed iteration {i+1}/{iterations}")
