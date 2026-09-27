@@ -1,34 +1,31 @@
-import platform
+from enum import Enum, unique
 
-# Application configuration constants
-APP_NAME = "python-utils-35"
-VERSION = "1.0.0"
+@unique
+class MouseButton(str, Enum):
+    """Supported mouse buttons for the autoclicker."""
+    LEFT = "left"
+    RIGHT = "right"
+    MIDDLE = "middle"
 
-# Mouse action constants
-LEFT_BUTTON = "left"
-RIGHT_BUTTON = "right"
-MIDDLE_BUTTON = "middle"
+@unique
+class ClickType(str, Enum):
+    """Types of click actions supported."""
+    SINGLE = "single"
+    DOUBLE = "double"
+    HOLD = "hold"
 
-# Default operation timings
-DEFAULT_INTERVAL = 0.1
-MAX_CLICK_RATE_LIMIT = 0.001
+# Default operation settings
+DEFAULT_INTERVAL_SECONDS: float = 0.1
+DEFAULT_CLICK_TYPE: ClickType = ClickType.SINGLE
+DEFAULT_MOUSE_BUTTON: MouseButton = MouseButton.LEFT
+DEFAULT_CLICK_COUNT: int = 0  # 0 indicates infinite looping
 
-# System specific pathing and configurations
-IS_WINDOWS = platform.system() == "Windows"
-IS_LINUX = platform.system() == "Linux"
-IS_MACOS = platform.system() == "Darwin"
+# System control hotkeys
+DEFAULT_START_HOTKEY: str = "f7"
+DEFAULT_STOP_HOTKEY: str = "f8"
 
-# Error and log patterns
-DEFAULT_LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-LOG_FILE_NAME = "autoclicker.log"
-
-# User interaction constants
-DEFAULT_HOTKEY = "f6"
-STOP_HOTKEY = "f7"
-
-def get_supported_buttons():
-    """Returns list of supported mouse buttons."""
-    return [LEFT_BUTTON, RIGHT_BUTTON, MIDDLE_BUTTON]
-
-if __name__ == "__main__":
-    print(f"Loaded {APP_NAME} constants for {platform.system()}")
+# Validation constraints and limits
+MIN_INTERVAL_SECONDS: float = 0.001
+MAX_INTERVAL_SECONDS: float = 3600.0
+MIN_CLICK_COUNT: int = 0
+MAX_CLICK_COUNT: int = 999999
