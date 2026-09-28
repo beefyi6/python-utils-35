@@ -1,36 +1,54 @@
-import re
+import sys
+from typing import Tuple, Union, Optional
 
-def validate_interval(value):
-    """Ensures click interval is a positive float."""
+class ValidationError(ValueError):
+    """Exception raised for validation errors in the autoclicker configuration."""
+    pass
+
+def validate_interval(interval: Union[int, float]) -> float:
+    """Validates the click interval in seconds."""
     try:
-        f_val = float(value)
-        return f_val > 0
-    except (ValueError, TypeError):
-        return False
+        val = float(interval)
+    except (TypeError, ValueError):
+        raise ValidationError(f"Interval must be a number, got {interval}")
+    
+    if val < 0.001:
+        raise ValidationError("Interval must be at least 0.001 seconds.")
+    return val
 
-def validate_coordinates(x, y):
-    """Checks if coordinates are non-negative integers."""
+def validate_button(button: str) -> str:
+    """Validates that the button is a recognized mouse button."""
+    allowed = {"left", "right", "middle"}
+    clean_button = str(button).strip().lower()
+    if clean_button not in allowed:
+        raise ValidationError(f"Button must be one of {allowed}, got '{button}'")
+    return clean_button
+
+def validate_clicks(clicks: int) -> int:
+    """Validates the number of clicks, where 0 represents infinite clicks."""
     try:
-        return int(x) >= 0 and int(y) >= 0
-    except (ValueError, TypeError):
-        return False
+        val = int(clicks)
+    except (TypeError, ValueError):
+        raise ValidationError(f"Clicks count must be an integer, got {clicks}")
+    
+    if val < 0:
+        raise ValidationError("Clicks count must be 0 (for infinite) or greater.")
+    return val
 
-def validate_hotkey(key):
-    """Validates hotkey string format (simple alphanumeric)."""
-    if not isinstance(key, str):
-        return False
-    return bool(re.match(r'^[a-zA-Z0-9+]+$', key))
-
-def sanitize_input(user_input):
-    """Strips whitespace and standardizes input for processing."""
-    if not isinstance(user_input, str):
-        return ""
-    return user_input.strip().lower()
-
-def is_positive_integer(value):
-    """Verifies that a value is a valid positive integer."""
+def validate_coordinates(coords: Optional[Tuple[int, int]]) -> Optional[Tuple[int, int]]:
+    """Validates screen coordinates if they are provided."""
+    if coords is None:
+        return None
+    
+    if not isinstance(coords, (tuple, list)) or len(coords) != 2:
+        raise ValidationError("Coordinates must be a tuple or list of (x, y) or None.")
+    
     try:
-        val = int(value)
-        return val > 0
-    except (ValueError, TypeError):
-        return False
+        x, y = int(coords[0]), int(coords[1])
+    except (TypeError, ValueError):
+        raise ValidationError(f"Coordinates must contain valid integers, got {coords}")
+        
+    if x < 0 or y < 0:
+        raise ValidationError(f"Coordinates cannot be negative, got ({x}, {y})")
+        
+    return (x, y)
