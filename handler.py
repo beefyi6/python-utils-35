@@ -1,28 +1,35 @@
-import pyautogui
 import time
-from typing import Tuple
+import pyautogui
+from typing import Tuple, Optional
 
-def perform_click(x: int, y: int, interval: float = 0.01) -> None:
-    """Execute a single mouse click at specified coordinates."""
-    pyautogui.moveTo(x, y)
-    pyautogui.click()
-    time.sleep(interval)
+class ClickHandler:
+    """Handles mouse automation logic for the autoclicker."""
 
-def drag_element(start: Tuple[int, int], end: Tuple[int, int], duration: float = 0.5) -> None:
-    """Execute a drag operation from start point to end point."""
-    pyautogui.moveTo(start[0], start[1])
-    pyautogui.dragTo(end[0], end[1], duration=duration, button='left')
+    def __init__(self, interval: float = 0.1) -> None:
+        """Initialize handler with click interval in seconds."""
+        self.interval: float = interval
+        self.is_running: bool = False
 
-def safety_check(x: int, y: int, screen_size: Tuple[int, int]) -> bool:
-    """Validate coordinates against current screen dimensions."""
-    width, height = screen_size
-    return 0 <= x <= width and 0 <= y <= height
+    def execute_click(self, x: int, y: int) -> None:
+        """Perform a single click at specified screen coordinates."""
+        pyautogui.click(x=x, y=y)
 
-def click_sequence(coords: list, delay: float) -> None:
-    """Iterate through list of coordinates and click each."""
-    for x, y in coords:
-        perform_click(x, y, delay)
+    def start_loop(self, coords: Tuple[int, int], duration: Optional[float] = None) -> None:
+        """
+        Execute continuous clicks until stop requested or duration elapsed.
+        :param coords: (x, y) target coordinates
+        :param duration: optional timeout in seconds
+        """
+        self.is_running = True
+        start_time: float = time.time()
 
-def get_mouse_position() -> Tuple[int, int]:
-    """Retrieve current cursor screen coordinates."""
-    return pyautogui.position()
+        while self.is_running:
+            if duration and (time.time() - start_time) > duration:
+                break
+            
+            self.execute_click(*coords)
+            time.sleep(self.interval)
+
+    def stop_loop(self) -> None:
+        """Terminate the ongoing click loop."""
+        self.is_running = False
