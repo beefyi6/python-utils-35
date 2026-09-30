@@ -1,57 +1,43 @@
+import functools
+import random
 import time
-from typing import Tuple, Callable, Optional
+import logging
+from typing import Callable, Any, Tuple, Type
 
+logger = logging.getLogger("autoclicker.utils")
 
-class AutoclickerError(Exception):
-    """Base exception for autoclicker utility operations."""
-    pass
-
-
-class OutOfBoundsError(AutoclickerError):
-    """Raised when click coordinates fall outside display area."""
-    pass
-
-
-class InvalidIntervalError(AutoclickerError):
-    """Raised when click interval is invalid or unsafe."""
-    pass
-
-
-def validate_coordinates(x: int, y: int, screen_bounds: Tuple[int, int]) -> Tuple[int, int]:
-    """Validate click coordinates against screen boundaries with safety checks."""
-    if not isinstance(x, int) or not isinstance(y, int):
-        raise TypeError(f"Coordinates must be integers, got ({type(x).__name__}, {type(y).__name__})")
-    
-    max_x, max_y = screen_bounds
-    if max_x <= 0 or max_y <= 0:
-        raise ValueError(f"Invalid screen dimensions: {screen_bounds}")
-
-    if not (0 <= x < max_x and 0 <= y < max_y):
-        raise OutOfBoundsError(f"Target point ({x}, {y}) outside screen area ({max_x}x{max_y})")
-
-    return x, y
-
-
-def safe_interval_delay(interval_seconds: float, min_limit: float = 0.001) -> float:
-    """Ensure click interval is safe and handles negative or near-zero inputs."""
-    if not isinstance(interval_seconds, (int, float)):
-        raise TypeError("Click interval must be a numerical value")
-    
-    if interval_seconds < 0:
-        raise InvalidIntervalError(f"Interval cannot be negative: {interval_seconds}")
-
-    # Clamp excessively small values to prevent high CPU utilization
-    return max(interval_seconds, min_limit)
-
-
-def execute_safely(action: Callable[..., None], *args, **kwargs) -> bool:
-    """Execute click action with exception handling for edge case failures."""
-    try:
-        action(*args, **kwargs)
-        return True
-    except AutoclickerError:
-        return False
-    except (TypeError, ValueError):
-        return False
-    except Exception as err:
-        raise AutoclickerError(f"Unhandled operational failure: {err}") from err
+def retry_network_op(
+    max_retries: int = 3,
+    initial_delay: float = 1.0,
+    backoff_factor: float = 2.0,
+    exceptions: Tuple[Type[BaseException], ...] = (ConnectionError, TimeoutError)
+) -> Callable:
+    """
+    Decorator implementing exponential backoff with jitter for network calls.
+    Ensures transient network drops during autoclicker tasks don't cause crashes.
+    """
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            delay = initial_delay
+            for attempt in range(1, max_retries + 1):
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as exc:
+                    if attempt == max_retries:
+                        logger.error(f"Failed after {max_retries} attempts: {exc}")
+                        raise exc
+                    
+                    # Apply jitter to mitigate colliding retries
+                    jitter = random.uniform(0.1, 0.5)
+                    sleep_time = (delay * backoff_factor) + jitter
+                    
+                    logger.warning(
+                        f"Network operation failed: {exc}. Retrying in {sleep_time:.2f}s "
+                        f"(Attempt {attempt}/{max_retries})"
+                    )
+                    time.sleep(sleep_time)
+                    delay = sleep_time
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
