@@ -1,28 +1,41 @@
-import time
-import pyautogui
 import random
+import time
+from typing import Tuple
 
-def safe_click(x, y, interval=0.1):
-    """Performs a click with a randomized delay to avoid detection."""
-    pyautogui.moveTo(x, y)
-    time.sleep(random.uniform(0.05, interval))
-    pyautogui.click()
 
-def drag_to(x1, y1, x2, y2, duration=0.5):
-    """Executes a mouse drag operation between two points."""
-    pyautogui.moveTo(x1, y1)
-    pyautogui.dragTo(x2, y2, duration=duration, button='left')
+def calculate_jitter_delay(base_interval: float, jitter_percentage: float = 0.1) -> float:
+    """Calculate a randomized delay interval to simulate human clicking variance."""
+    if base_interval <= 0:
+        return 0.0
+    
+    variance = base_interval * max(0.0, min(1.0, jitter_percentage))
+    delay = random.uniform(base_interval - variance, base_interval + variance)
+    return max(0.001, delay)
 
-def get_screen_center():
-    """Calculates the center of the primary display."""
-    width, height = pyautogui.size()
-    return width // 2, height // 2
 
-def human_pause(min_sec=0.5, max_sec=2.0):
-    """Introduces a random delay to simulate human behavior."""
-    time.sleep(random.uniform(min_sec, max_sec))
+def parse_interval(value: str) -> float:
+    """Parse human-readable interval strings like '500ms', '1.5s', or '2m' into seconds."""
+    val = value.strip().lower()
+    if val.endswith("ms"):
+        return float(val[:-2]) / 1000.0
+    elif val.endswith("s"):
+        return float(val[:-1])
+    elif val.endswith("m"):
+        return float(val[:-1]) * 60.0
+    
+    return float(val)
 
-def validate_bounds(x, y):
-    """Ensures coordinates are within screen dimensions."""
-    width, height = pyautogui.size()
-    return 0 <= x < width and 0 <= y < height
+
+def clamp_coordinates(x: int, y: int, screen_bounds: Tuple[int, int, int, int]) -> Tuple[int, int]:
+    """Ensure screen coordinates stay within specified screen boundaries (min_x, min_y, max_x, max_y)."""
+    min_x, min_y, max_x, max_y = screen_bounds
+    clamped_x = max(min_x, min(x, max_x))
+    clamped_y = max(min_y, min(y, max_y))
+    return clamped_x, clamped_y
+
+
+def cps_to_interval(cps: float) -> float:
+    """Convert target clicks per second (CPS) into standard delay interval in seconds."""
+    if cps <= 0:
+        raise ValueError("CPS target must be greater than zero")
+    return 1.0 / cps
