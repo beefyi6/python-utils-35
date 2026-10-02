@@ -1,59 +1,49 @@
-from typing import Dict, Any, Tuple
+import json
+from pathlib import Path
+from typing import Any, Dict
 
-class AutoClickerConfig:
-    """
-    Configuration management for the autoclicker application.
-    
-    Handles validation and storage of click intervals, mouse buttons, 
-    hotkeys, and randomization factors to mimic human behavior.
-    """
+DEFAULT_CONFIG: Dict[str, Any] = {
+    "delay_seconds": 0.1,
+    "mouse_button": "left",  # options: left, right, middle
+    "click_type": "single",   # options: single, double
+    "hotkey": "f8",
+    "random_delay_range": [0.0, 0.05],
+    "hold_time_seconds": 0.01
+}
 
-    def __init__(
-        self,
-        delay: float = 0.1,
-        button: str = "left",
-        hotkey: str = "f8",
-        random_interval: Tuple[float, float] = (0.01, 0.05)
-    ) -> None:
-        self.delay: float = delay
-        self.button: str = button
-        self.hotkey: str = hotkey
-        self.random_interval: Tuple[float, float] = random_interval
-        self.validate()
+class ConfigLoader:
+    def __init__(self, config_path: str = "config.json") -> None:
+        self.config_path = Path(config_path)
+        self.config = self.load_config()
 
-    def validate(self) -> None:
-        """
-        Validates configuration parameters to prevent errors during operation.
-        
-        Raises:
-            ValueError: If delay is negative, hotkey is empty, or interval bounds are invalid.
-        """
-        if self.delay <= 0:
-            raise ValueError("Delay must be a positive float representing seconds.")
-        
-        valid_buttons = {"left", "right", "middle"}
-        if self.button.lower() not in valid_buttons:
-            raise ValueError(f"Button must be one of {valid_buttons}")
-        
-        if not self.hotkey:
-            raise ValueError("Hotkey toggle shortcut cannot be empty.")
-        
-        min_rand, max_rand = self.random_interval
-        if min_rand < 0 or max_rand < 0:
-            raise ValueError("Randomization interval boundaries must be non-negative.")
-        if min_rand > max_rand:
-            raise ValueError("Minimum random delay cannot exceed maximum random delay.")
+    def load_config(self) -> Dict[str, Any]:
+        """Loads configuration from a file, falling back to defaults for missing options."""
+        if not self.config_path.exists():
+            self.save_defaults()
+            return DEFAULT_CONFIG.copy()
 
-    def to_dict(self) -> Dict[str, Any]:
-        """
-        Serializes the configuration settings into a dictionary format.
-        
-        Returns:
-            Dict[str, Any]: Dictionary representing the current settings.
-        """
-        return {
-            "delay": self.delay,
-            "button": self.button,
-            "hotkey": self.hotkey,
-            "random_interval": list(self.random_interval)
-        }
+        try:
+            with open(self.config_path, "r", encoding="utf-8") as f:
+                user_data = json.load(f)
+            
+            # Merge loaded configurations with the defaults
+            merged = DEFAULT_CONFIG.copy()
+            for key, val in user_data.items():
+                if key in merged and isinstance(val, type(merged[key])):
+                    merged[key] = val
+            return merged
+        except (json.JSONDecodeError, OSError):
+            # Return default config if file is corrupted or unreadable
+            return DEFAULT_CONFIG.copy()
+
+    def save_defaults(self) -> None:
+        """Saves standard default settings to configuration file."""
+        try:
+            with open(self.config_path, "w", encoding="utf-8") as f:
+                json.dump(DEFAULT_CONFIG, f, indent=4)
+        except OSError:
+            pass
+
+    def get(self, key: str) -> Any:
+        """Access config options with safety fallback."""
+        return self.config.get(key, DEFAULT_CONFIG.get(key))
