@@ -1,34 +1,34 @@
-import logging
-from pynput.mouse import Controller
+import time
+import threading
+from typing import Callable, Optional
 
-logger = logging.getLogger(__name__)
-mouse = Controller()
+class ClickHandler:
+    """Handles the execution of mouse click events."""
 
-def safe_click(x: int, y: int) -> bool:
-    """Performs a mouse click with boundary and system checks."""
-    try:
-        if not isinstance(x, int) or not isinstance(y, int):
-            raise ValueError(f"Coordinates must be integers, got ({type(x)}, {type(y)})")
-        
-        if x < 0 or y < 0:
-            logger.error(f"Invalid negative coordinates: ({x}, {y})")
-            return False
-            
-        mouse.position = (x, y)
-        mouse.click(0, 1)
-        return True
-        
-    except PermissionError:
-        logger.error("Insufficient system permissions for mouse control")
-    except Exception as e:
-        logger.critical(f"Unexpected automation failure: {e}")
-    
-    return False
+    def __init__(self, interval: float = 0.1) -> None:
+        self.interval: float = interval
+        self.is_running: bool = False
+        self._thread: Optional[threading.Thread] = None
 
-def validate_interval(seconds: float) -> float:
-    """Ensures click interval is within safe operating range."""
-    min_safe = 0.01
-    if seconds < min_safe:
-        logger.warning(f"Interval {seconds}s below threshold, capping at {min_safe}s")
-        return min_safe
-    return float(seconds)
+    def start(self, click_action: Callable[[], None]) -> None:
+        """Starts the background click loop."""
+        if not self.is_running:
+            self.is_running = True
+            self._thread = threading.Thread(target=self._run, args=(click_action,), daemon=True)
+            self._thread.start()
+
+    def stop(self) -> None:
+        """Stops the background click loop."""
+        self.is_running = False
+        if self._thread:
+            self._thread.join()
+
+    def _run(self, click_action: Callable[[], None]) -> None:
+        """Internal loop for continuous clicking."""
+        while self.is_running:
+            click_action()
+            time.sleep(self.interval)
+
+    def set_interval(self, interval: float) -> None:
+        """Updates the delay between clicks."""
+        self.interval = max(0.01, interval)
