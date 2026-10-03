@@ -1,35 +1,34 @@
-import time
-import pyautogui
-from typing import Tuple, Optional
+import logging
+from pynput.mouse import Controller
 
-class ClickHandler:
-    """Handles mouse automation logic for the autoclicker."""
+logger = logging.getLogger(__name__)
+mouse = Controller()
 
-    def __init__(self, interval: float = 0.1) -> None:
-        """Initialize handler with click interval in seconds."""
-        self.interval: float = interval
-        self.is_running: bool = False
-
-    def execute_click(self, x: int, y: int) -> None:
-        """Perform a single click at specified screen coordinates."""
-        pyautogui.click(x=x, y=y)
-
-    def start_loop(self, coords: Tuple[int, int], duration: Optional[float] = None) -> None:
-        """
-        Execute continuous clicks until stop requested or duration elapsed.
-        :param coords: (x, y) target coordinates
-        :param duration: optional timeout in seconds
-        """
-        self.is_running = True
-        start_time: float = time.time()
-
-        while self.is_running:
-            if duration and (time.time() - start_time) > duration:
-                break
+def safe_click(x: int, y: int) -> bool:
+    """Performs a mouse click with boundary and system checks."""
+    try:
+        if not isinstance(x, int) or not isinstance(y, int):
+            raise ValueError(f"Coordinates must be integers, got ({type(x)}, {type(y)})")
+        
+        if x < 0 or y < 0:
+            logger.error(f"Invalid negative coordinates: ({x}, {y})")
+            return False
             
-            self.execute_click(*coords)
-            time.sleep(self.interval)
+        mouse.position = (x, y)
+        mouse.click(0, 1)
+        return True
+        
+    except PermissionError:
+        logger.error("Insufficient system permissions for mouse control")
+    except Exception as e:
+        logger.critical(f"Unexpected automation failure: {e}")
+    
+    return False
 
-    def stop_loop(self) -> None:
-        """Terminate the ongoing click loop."""
-        self.is_running = False
+def validate_interval(seconds: float) -> float:
+    """Ensures click interval is within safe operating range."""
+    min_safe = 0.01
+    if seconds < min_safe:
+        logger.warning(f"Interval {seconds}s below threshold, capping at {min_safe}s")
+        return min_safe
+    return float(seconds)
