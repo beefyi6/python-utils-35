@@ -1,54 +1,26 @@
-import sys
-from typing import Tuple, Union, Optional
+import re
 
-class ValidationError(ValueError):
-    """Exception raised for validation errors in the autoclicker configuration."""
-    pass
-
-def validate_interval(interval: Union[int, float]) -> float:
-    """Validates the click interval in seconds."""
+def validate_interval(value):
+    """Checks if interval is a positive float or int."""
     try:
-        val = float(interval)
-    except (TypeError, ValueError):
-        raise ValidationError(f"Interval must be a number, got {interval}")
-    
-    if val < 0.001:
-        raise ValidationError("Interval must be at least 0.001 seconds.")
-    return val
+        val = float(value)
+        return val > 0
+    except (ValueError, TypeError):
+        return False
 
-def validate_button(button: str) -> str:
-    """Validates that the button is a recognized mouse button."""
-    allowed = {"left", "right", "middle"}
-    clean_button = str(button).strip().lower()
-    if clean_button not in allowed:
-        raise ValidationError(f"Button must be one of {allowed}, got '{button}'")
-    return clean_button
+def validate_coordinates(x, y):
+    """Verifies coordinates are non-negative integers."""
+    return isinstance(x, int) and isinstance(y, int) and x >= 0 and y >= 0
 
-def validate_clicks(clicks: int) -> int:
-    """Validates the number of clicks, where 0 represents infinite clicks."""
+def validate_hotkey(key):
+    """Ensures hotkey string matches standard key naming."""
+    pattern = r'^[a-z0-9_]{1,15}$'
+    return bool(re.match(pattern, str(key).lower()))
+
+def validate_iterations(count):
+    """Validates click iteration count; -1 signifies infinite."""
     try:
-        val = int(clicks)
-    except (TypeError, ValueError):
-        raise ValidationError(f"Clicks count must be an integer, got {clicks}")
-    
-    if val < 0:
-        raise ValidationError("Clicks count must be 0 (for infinite) or greater.")
-    return val
-
-def validate_coordinates(coords: Optional[Tuple[int, int]]) -> Optional[Tuple[int, int]]:
-    """Validates screen coordinates if they are provided."""
-    if coords is None:
-        return None
-    
-    if not isinstance(coords, (tuple, list)) or len(coords) != 2:
-        raise ValidationError("Coordinates must be a tuple or list of (x, y) or None.")
-    
-    try:
-        x, y = int(coords[0]), int(coords[1])
-    except (TypeError, ValueError):
-        raise ValidationError(f"Coordinates must contain valid integers, got {coords}")
-        
-    if x < 0 or y < 0:
-        raise ValidationError(f"Coordinates cannot be negative, got ({x}, {y})")
-        
-    return (x, y)
+        val = int(count)
+        return val >= -1
+    except (ValueError, TypeError):
+        return False
