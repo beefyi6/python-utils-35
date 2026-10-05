@@ -1,41 +1,36 @@
-import random
-from typing import Dict, List, Any
+import time
+import pyautogui
 
+def validate_interval(interval):
+    """Ensures click interval is within safe bounds."""
+    if not isinstance(interval, (int, float)):
+        raise ValueError("Interval must be a number")
+    if interval < 0.01:
+        return 0.01
+    if interval > 60:
+        return 60.0
+    return interval
 
-class ClickDataProcessor:
-    """Processes and normalizes raw click event data for autoclicker execution."""
+def run_autoclicker(clicks, interval):
+    """Main processing loop with input validation."""
+    try:
+        validated_interval = validate_interval(interval)
+        count = int(clicks)
+        
+        if count <= 0:
+            print("Invalid click count: must be positive")
+            return
 
-    def __init__(self, default_interval: float = 0.1, apply_jitter: bool = False):
-        self.default_interval = default_interval
-        self.apply_jitter = apply_jitter
+        print(f"Starting {count} clicks with {validated_interval}s interval")
+        for _ in range(count):
+            pyautogui.click()
+            time.sleep(validated_interval)
+            
+    except ValueError as e:
+        print(f"Input validation error: {e}")
+    except Exception as e:
+        print(f"Unexpected execution error: {e}")
 
-    def process_sequence(self, raw_sequence: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        Normalizes a list of raw click event dictionaries into a standardized format.
-        Ensures coordinates are non-negative integers and delays are positive floats.
-        """
-        processed = []
-        for idx, item in enumerate(raw_sequence):
-            x = int(item.get('x', 0))
-            y = int(item.get('y', 0))
-            button = str(item.get('button', 'left')).lower()
-            interval = float(item.get('interval', self.default_interval))
-
-            # Apply humanization jitter if enabled (adds slight variance)
-            if self.apply_jitter and interval > 0:
-                jitter = random.uniform(-0.1, 0.1) * interval
-                interval = max(0.01, interval + jitter)
-
-            processed.append({
-                'id': idx + 1,
-                'x': max(0, x),
-                'y': max(0, y),
-                'button': button if button in ('left', 'right', 'middle') else 'left',
-                'delay': round(interval, 4),
-                'clicks': max(1, int(item.get('clicks', 1)))
-            })
-        return processed
-
-    def calculate_total_duration(self, sequence: List[Dict[str, Any]]) -> float:
-        """Calculates total estimated execution time of a click sequence."""
-        return round(sum(item.get('delay', 0.0) for item in sequence), 4)
+if __name__ == '__main__':
+    # Example usage with validated parameters
+    run_autoclicker(5, 0.5)
