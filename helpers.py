@@ -1,37 +1,39 @@
-import json
-import os
-from typing import Dict, Any, Optional
+import time
+import functools
+import logging
+from typing import Callable, Any
 
-DEFAULT_CONFIG_PATH = "config.json"
+logger = logging.getLogger(__name__)
 
-def load_clicker_settings(filepath: str = DEFAULT_CONFIG_PATH) -> Dict[str, Any]:
-    """Loads autoclicker parameters from a local JSON file."""
-    if not os.path.exists(filepath):
-        return {"interval": 0.1, "button": "left", "repeat": -1}
-    
+def retry_network_operation(max_retries: int = 3, delay: float = 1.0):
+    """
+    Decorator to retry network-bound operations on failure.
+    """
+    def decorator(func: Callable):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs) -> Any:
+            last_exception = None
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except (ConnectionError, TimeoutError) as e:
+                    last_exception = e
+                    logger.warning(f"Attempt {attempt + 1} failed: {e}. Retrying in {delay}s...")
+                    time.sleep(delay)
+            
+            logger.error(f"Operation failed after {max_retries} attempts.")
+            raise last_exception
+        return wrapper
+    return decorator
+
+def validate_connection(target_url: str) -> bool:
+    """
+    Basic connectivity check helper for the autoclicker environment.
+    """
+    import socket
     try:
-        with open(filepath, "r") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, IOError):
-        return {}
-
-def save_clicker_settings(data: Dict[str, Any], filepath: str = DEFAULT_CONFIG_PATH) -> bool:
-    """Persists current clicker configuration to storage."""
-    try:
-        with open(filepath, "w") as f:
-            json.dump(data, f, indent=4)
+        host = target_url.replace("https://", "").replace("http://", "").split("/")[0]
+        socket.create_connection((host, 80), timeout=5)
         return True
-    except IOError:
+    except (OSError, socket.timeout):
         return False
-
-def validate_interval(interval: Any) -> float:
-    """Ensures click interval is a safe positive number."""
-    try:
-        val = float(interval)
-        return max(0.01, val)
-    except (ValueError, TypeError):
-        return 0.1
-
-def format_coords(x: int, y: int) -> str:
-    """Utility for logging coordinate points accurately."""
-    return f"({int(x)}, {int(y)})"
