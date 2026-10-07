@@ -1,38 +1,40 @@
-import random
 import time
-from typing import Tuple, List
+import pyautogui
 
-def get_jittered_position(x: int, y: int, radius: int = 3) -> Tuple[int, int]:
-    """Adds a slight random offset to coordinates to mimic human clicking."""
-    if radius <= 0:
-        return x, y
-    dx = random.randint(-radius, radius)
-    dy = random.randint(-radius, radius)
-    return x + dx, y + dy
+def validate_interval(interval):
+    """Ensures click interval is a positive float."""
+    try:
+        val = float(interval)
+        if val <= 0:
+            raise ValueError("Interval must be greater than zero.")
+        return val
+    except (ValueError, TypeError):
+        return None
 
-def humanized_sleep(target_delay: float, fluctuation: float = 0.15) -> None:
-    """Suspends execution for a target duration with a human-like variation."""
-    if target_delay <= 0:
+def run_autoclicker(interval, duration):
+    """
+    Main processing loop with input validation.
+    Executes clicks based on validated parameters.
+    """
+    valid_interval = validate_interval(interval)
+    if valid_interval is None:
+        print("Invalid interval provided. Aborting.")
         return
-    min_delay = max(0.001, target_delay * (1.0 - fluctuation))
-    max_delay = target_delay * (1.0 + fluctuation)
-    actual_delay = random.uniform(min_delay, max_delay)
-    time.sleep(actual_delay)
 
-def parse_coordinate_list(raw_input: str) -> List[Tuple[int, int]]:
-    """Parses a string of comma and semicolon separated coordinates."""
-    coordinates = []
-    if not raw_input:
-        return coordinates
+    if not isinstance(duration, (int, float)) or duration <= 0:
+        print("Invalid duration provided. Aborting.")
+        return
 
-    pairs = raw_input.split(";")
-    for pair in pairs:
-        clean_pair = pair.strip()
-        if not clean_pair:
-            continue
-        try:
-            x_str, y_str = clean_pair.split(",")
-            coordinates.append((int(x_str.strip()), int(y_str.strip())))
-        except ValueError:
-            continue
-    return coordinates
+    print(f"Starting autoclicker: {valid_interval}s interval for {duration}s.")
+    end_time = time.time() + duration
+    
+    try:
+        while time.time() < end_time:
+            pyautogui.click()
+            time.sleep(valid_interval)
+    except KeyboardInterrupt:
+        print("Execution stopped by user.")
+
+if __name__ == '__main__':
+    # Example usage for process simulation
+    run_autoclicker(0.5, 5.0)
