@@ -1,32 +1,44 @@
-import time
 import pyautogui
-from typing import Tuple
+import time
+from typing import Optional
 
-def safe_click(x: int, y: int, interval: float = 0.1) -> None:
-    """Performs a click at specified coordinates with a brief delay."""
-    pyautogui.moveTo(x, y)
-    time.sleep(interval)
-    pyautogui.click()
+class AutoClicker:
+    """Automates mouse clicking actions for repetitive tasks."""
 
-def get_screen_center() -> Tuple[int, int]:
-    """Calculates the center point of the primary display."""
-    width, height = pyautogui.size()
-    return width // 2, height // 2
+    def __init__(self, interval: float = 0.1, button: str = 'left') -> None:
+        self.interval: float = interval
+        self.button: str = button
+        self.is_running: bool = False
 
-def perform_macro(coords: list, iterations: int = 1) -> None:
-    """Executes a sequence of clicks for a defined number of cycles."""
-    for _ in range(iterations):
-        for x, y in coords:
-            safe_click(x, y)
-            time.sleep(0.05)
+    def start_clicking(self, clicks: Optional[int] = None) -> None:
+        """Initiates the clicking sequence until stopped or count reached."""
+        self.is_running = True
+        count: int = 0
+        try:
+            while self.is_running:
+                pyautogui.click(button=self.button)
+                time.sleep(self.interval)
+                count += 1
+                if clicks and count >= clicks:
+                    break
+        except KeyboardInterrupt:
+            self.stop_clicking()
 
-def validate_bounds(x: int, y: int) -> bool:
-    """Checks if coordinates are within screen resolution limits."""
-    width, height = pyautogui.size()
-    return 0 <= x <= width and 0 <= y <= height
+    def stop_clicking(self) -> None:
+        """Gracefully halts the active clicking sequence."""
+        self.is_running = False
 
-if __name__ == '__main__':
-    # Example usage for automated clicking sequence
-    center = get_screen_center()
-    if validate_bounds(*center):
-        perform_macro([center], iterations=3)
+    def set_interval(self, seconds: float) -> None:
+        """Updates the delay between individual clicks."""
+        if seconds < 0:
+            raise ValueError("Interval must be a positive number.")
+        self.interval = seconds
+
+def main() -> None:
+    """Entry point for basic autoclicker demonstration."""
+    clicker: AutoClicker = AutoClicker(interval=0.5)
+    print("Starting clicker. Press Ctrl+C to stop.")
+    clicker.start_clicking()
+
+if __name__ == "__main__":
+    main()
