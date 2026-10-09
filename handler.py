@@ -1,34 +1,53 @@
-import time
-import threading
-from typing import Callable, Optional
+import json
+import os
+from typing import List, Dict, Any
 
-class ClickHandler:
-    """Handles the execution of mouse click events."""
+class ClickSequenceHandler:
+    """Handles serialization, deserialization, and validation of autoclicker sequences."""
 
-    def __init__(self, interval: float = 0.1) -> None:
-        self.interval: float = interval
-        self.is_running: bool = False
-        self._thread: Optional[threading.Thread] = None
+    @staticmethod
+    def validate_step(step: Dict[str, Any]) -> bool:
+        """Validates a single autoclicker step."""
+        required_keys = {"x", "y", "delay", "button"}
+        if not all(key in step for key in required_keys):
+            return False
+        if not (isinstance(step["x"], (int, float)) and isinstance(step["y"], (int, float))):
+            return False
+        if not isinstance(step["delay"], (int, float)) or step["delay"] < 0:
+            return False
+        if step["button"] not in {"left", "right", "middle"}:
+            return False
+        return True
 
-    def start(self, click_action: Callable[[], None]) -> None:
-        """Starts the background click loop."""
-        if not self.is_running:
-            self.is_running = True
-            self._thread = threading.Thread(target=self._run, args=(click_action,), daemon=True)
-            self._thread.start()
+    @classmethod
+    def load_sequence(cls, filepath: str) -> List[Dict[str, Any]]:
+        """Loads and validates a click sequence from a JSON file."""
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"Sequence file not found: {filepath}")
 
-    def stop(self) -> None:
-        """Stops the background click loop."""
-        self.is_running = False
-        if self._thread:
-            self._thread.join()
+        with open(filepath, "r", encoding="utf-8") as f:
+            data = json.load(f)
 
-    def _run(self, click_action: Callable[[], None]) -> None:
-        """Internal loop for continuous clicking."""
-        while self.is_running:
-            click_action()
-            time.sleep(self.interval)
+        if not isinstance(data, list):
+            raise ValueError("Sequence data must be a JSON list of click steps")
 
-    def set_interval(self, interval: float) -> None:
-        """Updates the delay between clicks."""
-        self.interval = max(0.01, interval)
+        for index, step in enumerate(data):
+            if not cls.validate_step(step):
+                raise ValueError(f"Invalid sequence format at index {index}: {step}")
+
+        return data
+
+    @classmethod
+    def save_sequence(cls, filepath: str, sequence: List[Dict[str, Any]]) -> None:
+        """Validates and saves a click sequence to a JSON file."""
+        for index, step in enumerate(sequence):
+            if not cls.validate_step(step):
+                raise ValueError(f"Invalid step detected at index {index}: {step}")
+
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(sequence, f, indent=4)
+
+    @staticmethod
+    def calculate_total_duration(sequence: List[Dict[str, Any]]) -> float:
+        """Calculates the total duration of the click sequence in seconds."""
+        return sum(step.get("delay", 0.0) for step in sequence)
