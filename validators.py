@@ -1,47 +1,44 @@
-import re
-from typing import Tuple, Any
+from typing import Tuple, Union, Optional
 
-# Supported mouse buttons for the autoclicker
-VALID_BUTTONS = {"left", "right", "middle"}
+class ValidationError(ValueError):
+    """Raised when autoclicker configuration parameters are invalid."""
+    pass
 
-def validate_coordinates(coords: Any) -> Tuple[int, int]:
-    """Validates screen coordinates and returns them as a tuple of integers."""
-    if not isinstance(coords, (tuple, list)) or len(coords) != 2:
-        raise ValueError("Coordinates must be a tuple or list of two integers (x, y).")
-    try:
-        x, y = int(coords[0]), int(coords[1])
-    except (TypeError, ValueError):
-        raise ValueError("Coordinate values must be castable to integers.")
-    
+def validate_click_interval(interval: float) -> float:
+    """Validates that the click interval is a positive float."""
+    if not isinstance(interval, (int, float)):
+        raise ValidationError(f"Interval must be a number, got {type(interval).__name__}")
+    if interval <= 0:
+        raise ValidationError(f"Interval must be greater than zero, got {interval}")
+    return float(interval)
+
+def validate_coordinates(coords: Optional[Tuple[int, int]]) -> Optional[Tuple[int, int]]:
+    """Ensures mouse coordinates are valid screen coordinates or None."""
+    if coords is None:
+        return None
+    if not isinstance(coords, tuple) or len(coords) != 2:
+        raise ValidationError(f"Coordinates must be a tuple of (x, y), got {coords}")
+    x, y = coords
+    if not isinstance(x, int) or not isinstance(y, int):
+        raise ValidationError("Coordinates must consist of integers only")
     if x < 0 or y < 0:
-        raise ValueError("Coordinates cannot be negative.")
-    return x, y
+        raise ValidationError(f"Coordinates cannot be negative, got ({x}, {y})")
+    return (x, y)
 
-def validate_interval(interval: Any) -> float:
-    """Validates click delay interval in seconds."""
-    try:
-        val = float(interval)
-    except (TypeError, ValueError):
-        raise ValueError("Interval must be a valid number.")
-    if val < 0.001:
-        raise ValueError("Interval must be at least 0.001 seconds (1 millisecond).")
-    return val
-
-def validate_click_count(count: Any) -> int:
-    """Validates the total number of clicks (0 represents infinite/continuous)."""
-    try:
-        val = int(count)
-    except (TypeError, ValueError):
-        raise ValueError("Click count must be a valid integer.")
-    if val < 0:
-        raise ValueError("Click count cannot be negative (use 0 for infinite).")
-    return val
+def validate_click_count(count: int) -> int:
+    """Validates click repetition count where 0 indicates infinite looping."""
+    if not isinstance(count, int):
+        raise ValidationError(f"Click count must be an integer, got {type(count).__name__}")
+    if count < 0:
+        raise ValidationError(f"Click count cannot be negative, got {count}")
+    return count
 
 def validate_button(button: str) -> str:
-    """Validates that the specified mouse button is supported."""
+    """Normalizes and validates target mouse button values."""
+    allowed_buttons = {"left", "right", "middle"}
     if not isinstance(button, str):
-        raise TypeError("Button name must be a string.")
-    cleaned_button = button.strip().lower()
-    if cleaned_button not in VALID_BUTTONS:
-        raise ValueError(f"Invalid button '{button}'. Supported: {', '.join(VALID_BUTTONS)}")
-    return cleaned_button
+        raise ValidationError("Mouse button identifier must be a string")
+    normalized = button.lower().strip()
+    if normalized not in allowed_buttons:
+        raise ValidationError(f"Unsupported mouse button '{button}', use: {', '.join(allowed_buttons)}")
+    return normalized
