@@ -1,40 +1,32 @@
 import time
-import pyautogui
+import functools
+import logging
 
-def validate_interval(interval):
-    """Ensures click interval is a positive float."""
-    try:
-        val = float(interval)
-        if val <= 0:
-            raise ValueError("Interval must be greater than zero.")
-        return val
-    except (ValueError, TypeError):
-        return None
+# Logger setup for autoclicker operations
+logger = logging.getLogger('python-utils-35')
 
-def run_autoclicker(interval, duration):
+def retry_network_operation(max_retries=3, delay=1.0):
     """
-    Main processing loop with input validation.
-    Executes clicks based on validated parameters.
+    Decorator to implement exponential backoff retry logic 
+    for unstable network-dependent autoclicker endpoints.
     """
-    valid_interval = validate_interval(interval)
-    if valid_interval is None:
-        print("Invalid interval provided. Aborting.")
-        return
-
-    if not isinstance(duration, (int, float)) or duration <= 0:
-        print("Invalid duration provided. Aborting.")
-        return
-
-    print(f"Starting autoclicker: {valid_interval}s interval for {duration}s.")
-    end_time = time.time() + duration
-    
-    try:
-        while time.time() < end_time:
-            pyautogui.click()
-            time.sleep(valid_interval)
-    except KeyboardInterrupt:
-        print("Execution stopped by user.")
-
-if __name__ == '__main__':
-    # Example usage for process simulation
-    run_autoclicker(0.5, 5.0)
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            attempts = 0
+            current_delay = delay
+            while attempts < max_retries:
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    attempts += 1
+                    if attempts >= max_retries:
+                        logger.error(f"Final attempt failed for {func.__name__}: {e}")
+                        raise
+                    
+                    logger.warning(f"Retry {attempts}/{max_retries} for {func.__name__} after {current_delay}s")
+                    time.sleep(current_delay)
+                    current_delay *= 2
+            return None
+        return wrapper
+    return decorator
