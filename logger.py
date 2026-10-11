@@ -1,38 +1,35 @@
-import json
-import datetime
-from pathlib import Path
-from typing import Dict, Any
+import logging
+from logging.handlers import RotatingFileHandler
+import os
 
-LOG_FILE = Path("click_history.json")
+def setup_logger(name='autoclicker', log_file='app.log', level=logging.INFO):
+    """Initializes a rotating file logger for the application."""
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
 
-def save_click_event(action_data: Dict[str, Any]) -> None:
-    """Appends a single click event to the persistent storage file."""
-    event = {
-        "timestamp": datetime.datetime.now().isoformat(),
-        **action_data
-    }
-    
-    history = []
-    if LOG_FILE.exists():
-        try:
-            with open(LOG_FILE, "r") as f:
-                history = json.load(f)
-        except (json.JSONDecodeError, IOError):
-            history = []
-    
-    history.append(event)
-    
-    with open(LOG_FILE, "w") as f:
-        json.dump(history, f, indent=4)
+    # Prevent duplicate handlers if logger is re-initialized
+    if not logger.handlers:
+        # Ensure logs directory exists
+        log_dir = os.path.dirname(log_file)
+        if log_dir and not os.path.exists(log_dir):
+            os.makedirs(log_dir)
 
-def get_recent_clicks(limit: int = 10) -> list:
-    """Retrieves the last n logged click events."""
-    if not LOG_FILE.exists():
-        return []
-    
-    try:
-        with open(LOG_FILE, "r") as f:
-            data = json.load(f)
-            return data[-limit:]
-    except (json.JSONDecodeError, IOError):
-        return []
+        # Rotation: 1MB per file, keep 3 backup files
+        handler = RotatingFileHandler(
+            log_file, 
+            maxBytes=1*1024*1024, 
+            backupCount=3
+        )
+        
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+
+        # Add console output for convenience
+        console = logging.StreamHandler()
+        console.setFormatter(formatter)
+        logger.addHandler(console)
+
+    return logger
