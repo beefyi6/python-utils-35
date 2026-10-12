@@ -1,44 +1,31 @@
-from typing import Tuple, Union, Optional
+import re
+from typing import Dict, Any, Optional
 
-class ValidationError(ValueError):
-    """Raised when autoclicker configuration parameters are invalid."""
-    pass
+def validate_click_config(config: Dict[str, Any]) -> bool:
+    """
+    Validates the structure and range of autoclicker configuration values.
+    Returns True if valid, raises ValueError otherwise.
+    """
+    required_keys = {'interval', 'button', 'repeat_count'}
+    if not all(key in config for key in required_keys):
+        raise ValueError(f"Missing required config keys: {required_keys - config.keys()}")
 
-def validate_click_interval(interval: float) -> float:
-    """Validates that the click interval is a positive float."""
-    if not isinstance(interval, (int, float)):
-        raise ValidationError(f"Interval must be a number, got {type(interval).__name__}")
-    if interval <= 0:
-        raise ValidationError(f"Interval must be greater than zero, got {interval}")
-    return float(interval)
+    if not isinstance(config['interval'], (int, float)) or config['interval'] < 0.01:
+        raise ValueError("Interval must be a number >= 0.01 seconds.")
 
-def validate_coordinates(coords: Optional[Tuple[int, int]]) -> Optional[Tuple[int, int]]:
-    """Ensures mouse coordinates are valid screen coordinates or None."""
-    if coords is None:
-        return None
-    if not isinstance(coords, tuple) or len(coords) != 2:
-        raise ValidationError(f"Coordinates must be a tuple of (x, y), got {coords}")
-    x, y = coords
-    if not isinstance(x, int) or not isinstance(y, int):
-        raise ValidationError("Coordinates must consist of integers only")
-    if x < 0 or y < 0:
-        raise ValidationError(f"Coordinates cannot be negative, got ({x}, {y})")
-    return (x, y)
+    if config['button'] not in ('left', 'right', 'middle'):
+        raise ValueError("Button must be one of: left, right, middle.")
 
-def validate_click_count(count: int) -> int:
-    """Validates click repetition count where 0 indicates infinite looping."""
-    if not isinstance(count, int):
-        raise ValidationError(f"Click count must be an integer, got {type(count).__name__}")
-    if count < 0:
-        raise ValidationError(f"Click count cannot be negative, got {count}")
-    return count
+    if not isinstance(config['repeat_count'], int) or config['repeat_count'] < -1:
+        raise ValueError("Repeat count must be -1 (infinite) or positive integer.")
 
-def validate_button(button: str) -> str:
-    """Normalizes and validates target mouse button values."""
-    allowed_buttons = {"left", "right", "middle"}
-    if not isinstance(button, str):
-        raise ValidationError("Mouse button identifier must be a string")
-    normalized = button.lower().strip()
-    if normalized not in allowed_buttons:
-        raise ValidationError(f"Unsupported mouse button '{button}', use: {', '.join(allowed_buttons)}")
-    return normalized
+    return True
+
+def sanitize_hotkey_string(hotkey: str) -> str:
+    """
+    Ensures hotkey input conforms to expected format for input simulation.
+    """
+    clean_key = re.sub(r'[^a-zA-Z0-9+]', '', hotkey).lower()
+    if not clean_key:
+        raise ValueError("Invalid hotkey characters provided.")
+    return clean_key
