@@ -1,36 +1,40 @@
-import time
+import logging
 import pyautogui
+import time
 
-def validate_interval(interval):
-    """Ensures click interval is within safe bounds."""
-    if not isinstance(interval, (int, float)):
-        raise ValueError("Interval must be a number")
-    if interval < 0.01:
-        return 0.01
-    if interval > 60:
-        return 60.0
-    return interval
+logger = logging.getLogger(__name__)
 
-def run_autoclicker(clicks, interval):
-    """Main processing loop with input validation."""
+def execute_click(x: int, y: int, interval: float = 0.1):
+    """Performs a mouse click with input validation and safety checks."""
     try:
-        validated_interval = validate_interval(interval)
-        count = int(clicks)
+        if not (isinstance(x, int) and isinstance(y, int)):
+            raise ValueError(f"Coordinates must be integers, got ({type(x)}, {type(y)})")
         
-        if count <= 0:
-            print("Invalid click count: must be positive")
-            return
-
-        print(f"Starting {count} clicks with {validated_interval}s interval")
-        for _ in range(count):
-            pyautogui.click()
-            time.sleep(validated_interval)
+        screen_width, screen_height = pyautogui.size()
+        if not (0 <= x <= screen_width and 0 <= y <= screen_height):
+            raise ValueError(f"Coordinates ({x}, {y}) out of screen bounds")
             
+        # Fail-safe: move mouse to top-left to abort
+        pyautogui.FAILSAFE = True
+        
+        pyautogui.click(x, y)
+        time.sleep(interval)
+        
+    except pyautogui.FailSafeException:
+        logger.error("Fail-safe triggered: process aborted by user")
+        raise
+    except pyautogui.PyAutoGUIException as e:
+        logger.error(f"PyAutoGUI interaction error: {e}")
     except ValueError as e:
-        print(f"Input validation error: {e}")
+        logger.warning(f"Invalid click parameters: {e}")
     except Exception as e:
-        print(f"Unexpected execution error: {e}")
+        logger.critical(f"Unexpected system error during click: {e}")
 
-if __name__ == '__main__':
-    # Example usage with validated parameters
-    run_autoclicker(5, 0.5)
+def batch_click_process(coords_list):
+    """Processes a list of coordinate tuples with error isolation."""
+    for coords in coords_list:
+        try:
+            execute_click(*coords)
+        except (ValueError, TypeError) as e:
+            logger.error(f"Skipping invalid coordinate entry {coords}: {e}")
+            continue
