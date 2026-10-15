@@ -1,22 +1,24 @@
 from typing import Optional
 
-class AutoClickerError(Exception):
-    """Base exception for the python-utils-35 package."""
+class AutoclickerError(Exception):
+    """Base exception for all autoclicker operations."""
     pass
 
-class ConfigurationError(AutoClickerError):
-    """Raised when the clicker configuration is invalid."""
-    def __init__(self, message: str, field: Optional[str] = None) -> None:
-        self.field = field
-        super().__init__(f"{message} (field: {field})" if field else message)
+class ConfigurationError(AutoclickerError):
+    """Raised when the configuration file is invalid or missing."""
+    def __init__(self, message: str, config_path: Optional[str] = None) -> None:
+        self.config_path = config_path
+        super().__init__(f"{message} (Path: {config_path})")
 
-class ClickExecutionError(AutoClickerError):
-    """Raised during failures in the clicking event loop."""
+class ClickerRuntimeError(AutoclickerError):
+    """Raised during mouse event execution failures."""
     def __init__(self, message: str, code: int = 1) -> None:
         self.code = code
-        super().__init__(f"{message} [Error Code: {code}]")
+        super().__init__(f"{message} (Error code: {code})")
 
-class PermissionDeniedError(AutoClickerError):
-    """Raised when the script lacks required system OS access."""
-    def __init__(self, message: str = "Insufficient privileges for input control") -> None:
-        super().__init__(message)
+class ValidationError(AutoclickerError):
+    """Raised when user input fails boundary validation."""
+    def __init__(self, field: str, value: any) -> None:
+        self.field = field
+        self.value = value
+        super().__init__(f"Invalid value '{value}' for field '{field}'")
