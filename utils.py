@@ -2,31 +2,32 @@ import time
 import functools
 import logging
 
-# Logger setup for autoclicker operations
-logger = logging.getLogger('python-utils-35')
+logger = logging.getLogger(__name__)
 
-def retry_network_operation(max_retries=3, delay=1.0):
-    """
-    Decorator to implement exponential backoff retry logic 
-    for unstable network-dependent autoclicker endpoints.
-    """
+def retry_network_op(retries=3, delay=1, backoff=2):
+    """Decorator for retrying network operations with exponential backoff."""
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            attempts = 0
             current_delay = delay
-            while attempts < max_retries:
+            for attempt in range(retries):
                 try:
                     return func(*args, **kwargs)
-                except Exception as e:
-                    attempts += 1
-                    if attempts >= max_retries:
+                except (ConnectionError, TimeoutError) as e:
+                    if attempt == retries - 1:
                         logger.error(f"Final attempt failed for {func.__name__}: {e}")
                         raise
                     
-                    logger.warning(f"Retry {attempts}/{max_retries} for {func.__name__} after {current_delay}s")
+                    logger.warning(f"Attempt {attempt + 1} failed, retrying in {current_delay}s...")
                     time.sleep(current_delay)
-                    current_delay *= 2
+                    current_delay *= backoff
             return None
         return wrapper
     return decorator
+
+@retry_network_op(retries=3, delay=2)
+def fetch_remote_config(url):
+    """Example network operation for autoclicker configuration."""
+    # Simulating network call
+    print(f"Fetching configuration from {url}")
+    raise ConnectionError("Server unreachable")
