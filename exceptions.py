@@ -1,24 +1,28 @@
-from typing import Optional
-
 class AutoclickerError(Exception):
-    """Base exception for all autoclicker operations."""
+    """Base exception for the autoclicker."""
     pass
 
 class ConfigurationError(AutoclickerError):
-    """Raised when the configuration file is invalid or missing."""
-    def __init__(self, message: str, config_path: Optional[str] = None) -> None:
-        self.config_path = config_path
-        super().__init__(f"{message} (Path: {config_path})")
+    """Raised when config values are invalid."""
+    pass
 
-class ClickerRuntimeError(AutoclickerError):
-    """Raised during mouse event execution failures."""
-    def __init__(self, message: str, code: int = 1) -> None:
-        self.code = code
-        super().__init__(f"{message} (Error code: {code})")
+class InputDeviceError(AutoclickerError):
+    """Raised when mouse or keyboard control fails."""
+    pass
 
-class ValidationError(AutoclickerError):
-    """Raised when user input fails boundary validation."""
-    def __init__(self, field: str, value: any) -> None:
-        self.field = field
-        self.value = value
-        super().__init__(f"Invalid value '{value}' for field '{field}'")
+class ExecutionTimeoutError(AutoclickerError):
+    """Raised when an action exceeds the time limit."""
+    pass
+
+def validate_click_interval(interval: float):
+    """Ensures click interval is within safe operational bounds."""
+    if interval < 0.01:
+        raise ConfigurationError(f"Interval {interval}s too low: risk of system lag")
+    if interval > 3600:
+        raise ConfigurationError(f"Interval {interval}s too high: potential user error")
+
+def handle_device_failure(error: Exception):
+    """Standardized response to input hardware interaction failures."""
+    if isinstance(error, PermissionError):
+        raise InputDeviceError("Insufficient privileges for system input control") from error
+    raise InputDeviceError("Unexpected hardware communication failure") from error
