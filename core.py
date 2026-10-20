@@ -1,71 +1,43 @@
 import time
-import threading
-from typing import Dict, Any, Optional
+import urllib.request
+import urllib.error
+import logging
+from functools import wraps
+from typing import Callable, Any
+
+logger = logging.getLogger(__name__)
+
+def retry_network_op(
+    max_retries: int = 3,
+    delay: float = 1.0,
+    backoff_factor: float = 2.0,
+    exceptions: tuple = (urllib.error.URLError, TimeoutError, OSError)
+) -> Callable:
+    """Decorator that retries network operations with exponential backoff."""
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            current_delay = delay
+            for attempt in range(1, max_retries + 1):
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as err:
+                    if attempt == max_retries:
+                        logger.error("Network operation failed after %d attempts: %s", max_retries, err)
+                        raise
+                    logger.warning(
+                        "Attempt %d/%d failed (%s). Retrying in %.1fs...",
+                        attempt, max_retries, err, current_delay
+                    )
+                    time.sleep(current_delay)
+                    current_delay *= backoff_factor
+        return wrapper
+    return decorator
 
 
-class AutoClicker:
-    """Core controller for managing automated mouse click sequences.
-
-    Handles threaded execution of repetitive click tasks with configurable
-    intervals and mouse button selection.
-    """
-
-    def __init__(self, interval: float = 0.1, button: str = "left") -> None:
-        """Initialize the clicker instance.
-
-        Args:
-            interval: Delay in seconds between clicks.
-            button: Mouse button to simulate ('left', 'right', or 'middle').
-        """
-        self.interval: float = max(0.001, interval)
-        self.button: str = button.lower()
-        self.running: bool = False
-        self.total_clicks: int = 0
-        self._thread: Optional[threading.Thread] = None
-
-    def _click_loop(self) -> None:
-        """Internal loop executed in a separate thread to issue clicks."""
-        while self.running:
-            self.total_clicks += 1
-            time.sleep(self.interval)
-
-    def start(self) -> bool:
-        """Start the auto-clicking loop in a background thread.
-
-        Returns:
-            True if started successfully, False if already running.
-        """
-        if self.running:
-            return False
-
-        self.running = True
-        self._thread = threading.Thread(target=self._click_loop, daemon=True)
-        self._thread.start()
-        return True
-
-    def stop(self) -> bool:
-        """Stop the background clicking process.
-
-        Returns:
-            True if stopped successfully, False if was not running.
-        """
-        if not self.running:
-            return False
-
-        self.running = False
-        if self._thread and self._thread.is_alive():
-            self._thread.join(timeout=1.0)
-        return True
-
-    def get_stats(self) -> Dict[str, Any]:
-        """Retrieve current operational status and total click count.
-
-        Returns:
-            Dictionary containing state details and click metrics.
-        """
-        return {
-            "running": self.running,
-            "interval": self.interval,
-            "button": self.button,
-            "total_clicks": self.total_clicks,
-        }
+@retry_network_op(max_retries=3, delay=0.5)
+def fetch_remote_config(url: str, timeout: float = 5.0) -> bytes:
+    """Fetch remote autoclicker profile or update configuration."""
+    req = urllib.request.Request(url, headers={"User-Agent": "AutoClicker-Utils/3.5"})
+    with urllib.request.urlopen(req, timeout=timeout) as response:
+        return response.read()
