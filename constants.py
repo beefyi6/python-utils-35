@@ -1,42 +1,39 @@
-import logging
-import os
+from enum import Enum
 
-# Configuration constants with validation paths
-DEFAULT_CLICK_INTERVAL = 0.05
-MIN_INTERVAL = 0.001
-MAX_INTERVAL = 60.0
 
-# Logging configuration constants
-LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-LOG_LEVEL = logging.INFO
+class MouseButton(Enum):
+    """Mouse buttons supported by the autoclicker engine."""
+    LEFT = "left"
+    RIGHT = "right"
+    MIDDLE = "middle"
 
-# Default system path definitions
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_FILE_PATH = os.path.join(BASE_DIR, 'settings.json')
 
-# Error handling status codes
-STATUS_SUCCESS = 0
-STATUS_INVALID_INPUT = 1
-STATUS_PERMISSION_DENIED = 2
-STATUS_OS_ERROR = 3
+class ClickType(Enum):
+    """Types of click actions available."""
+    SINGLE = "single"
+    DOUBLE = "double"
+    HOLD = "hold"
 
-# Supported mouse button mapping
-MOUSE_BUTTONS = {
-    'left': 'left',
-    'right': 'right',
-    'middle': 'middle'
+
+# Default timing values in seconds
+DEFAULT_INTERVAL_SECONDS = 0.1
+MIN_ALLOWED_INTERVAL = 0.001
+MAX_ALLOWED_INTERVAL = 86400.0  # 24 hours
+
+# Failsafe and control defaults
+DEFAULT_HOTKEY_TOGGLE = "f6"
+DEFAULT_HOTKEY_STOP = "f7"
+FAILSAFE_CORNER_PADDING_PX = 10
+
+# Common timing presets (label -> seconds)
+SPEED_PRESETS = {
+    "ultra_fast": 0.005,
+    "fast": 0.05,
+    "normal": 0.2,
+    "slow": 1.0,
 }
 
-def get_safe_interval(interval: float) -> float:
-    """Clamps interval within acceptable bounds to prevent system hangs."""
-    if not isinstance(interval, (int, float)):
-        return DEFAULT_CLICK_INTERVAL
-    
-    return max(MIN_INTERVAL, min(float(interval), MAX_INTERVAL))
 
-# Default application state
-DEFAULT_STATE = {
-    'enabled': False,
-    'interval': DEFAULT_CLICK_INTERVAL,
-    'button': 'left'
-}
+def get_preset_interval(preset_name: str) -> float:
+    """Return the interval in seconds for a known preset name."""
+    return SPEED_PRESETS.get(preset_name.lower(), DEFAULT_INTERVAL_SECONDS)
