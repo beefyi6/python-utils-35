@@ -1,33 +1,46 @@
 import time
-import functools
-import logging
+import pyautogui
+from typing import Tuple, Optional
 
-logger = logging.getLogger(__name__)
+def perform_click(x: int, y: int, interval: float = 0.01) -> bool:
+    """
+    Executes a mouse click at specified coordinates.
 
-def retry_network_op(retries=3, delay=1, backoff=2):
-    """Decorator for retrying network operations with exponential backoff."""
-    def decorator(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            current_delay = delay
-            for attempt in range(retries):
-                try:
-                    return func(*args, **kwargs)
-                except (ConnectionError, TimeoutError) as e:
-                    if attempt == retries - 1:
-                        logger.error(f"Final attempt failed for {func.__name__}: {e}")
-                        raise
-                    
-                    logger.warning(f"Attempt {attempt + 1} failed, retrying in {current_delay}s...")
-                    time.sleep(current_delay)
-                    current_delay *= backoff
-            return None
-        return wrapper
-    return decorator
+    Args:
+        x: Horizontal screen coordinate.
+        y: Vertical screen coordinate.
+        interval: Time duration to sleep after clicking.
 
-@retry_network_op(retries=3, delay=2)
-def fetch_remote_config(url):
-    """Example network operation for autoclicker configuration."""
-    # Simulating network call
-    print(f"Fetching configuration from {url}")
-    raise ConnectionError("Server unreachable")
+    Returns:
+        bool: True if click was successful, False otherwise.
+    """
+    try:
+        pyautogui.click(x=x, y=y)
+        time.sleep(interval)
+        return True
+    except Exception:
+        return False
+
+def get_screen_center() -> Tuple[int, int]:
+    """
+    Retrieves the center coordinates of the primary display.
+
+    Returns:
+        Tuple[int, int]: The (x, y) coordinates of the center.
+    """
+    width, height = pyautogui.size()
+    return (width // 2, height // 2)
+
+def validate_coordinates(x: int, y: int) -> bool:
+    """
+    Checks if coordinates are within screen boundaries.
+
+    Args:
+        x: Screen X position.
+        y: Screen Y position.
+
+    Returns:
+        bool: True if coordinates are valid, False otherwise.
+    """
+    width, height = pyautogui.size()
+    return 0 <= x <= width and 0 <= y <= height
