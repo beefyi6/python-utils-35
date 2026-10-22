@@ -1,40 +1,39 @@
-import logging
-import pyautogui
 import time
+import threading
+from typing import Optional, Callable
 
-logger = logging.getLogger(__name__)
+class ClickProcessor:
+    """Handles the execution of autoclick events in a separate thread."""
 
-def execute_click(x: int, y: int, interval: float = 0.1):
-    """Performs a mouse click with input validation and safety checks."""
-    try:
-        if not (isinstance(x, int) and isinstance(y, int)):
-            raise ValueError(f"Coordinates must be integers, got ({type(x)}, {type(y)})")
-        
-        screen_width, screen_height = pyautogui.size()
-        if not (0 <= x <= screen_width and 0 <= y <= screen_height):
-            raise ValueError(f"Coordinates ({x}, {y}) out of screen bounds")
-            
-        # Fail-safe: move mouse to top-left to abort
-        pyautogui.FAILSAFE = True
-        
-        pyautogui.click(x, y)
-        time.sleep(interval)
-        
-    except pyautogui.FailSafeException:
-        logger.error("Fail-safe triggered: process aborted by user")
-        raise
-    except pyautogui.PyAutoGUIException as e:
-        logger.error(f"PyAutoGUI interaction error: {e}")
-    except ValueError as e:
-        logger.warning(f"Invalid click parameters: {e}")
-    except Exception as e:
-        logger.critical(f"Unexpected system error during click: {e}")
+    def __init__(self, interval: float = 0.1) -> None:
+        self.interval: float = interval
+        self._running: bool = False
+        self._thread: Optional[threading.Thread] = None
 
-def batch_click_process(coords_list):
-    """Processes a list of coordinate tuples with error isolation."""
-    for coords in coords_list:
-        try:
-            execute_click(*coords)
-        except (ValueError, TypeError) as e:
-            logger.error(f"Skipping invalid coordinate entry {coords}: {e}")
-            continue
+    def start(self, action_callback: Callable[[], None]) -> None:
+        """Starts the click loop execution."""
+        if not self._running:
+            self._running = True
+            self._thread = threading.Thread(
+                target=self._run_loop, 
+                args=(action_callback,),
+                daemon=True
+            )
+            self._thread.start()
+
+    def stop(self) -> None:
+        """Stops the click loop execution."""
+        self._running = False
+        if self._thread is not None:
+            self._thread.join()
+            self._thread = None
+
+    def _run_loop(self, callback: Callable[[], None]) -> None:
+        """Internal loop to execute actions at set intervals."""
+        while self._running:
+            callback()
+            time.sleep(self.interval)
+
+    def update_interval(self, new_interval: float) -> None:
+        """Adjusts the frequency of click events."""
+        self.interval = max(0.01, new_interval)
