@@ -1,39 +1,42 @@
 import time
-import functools
-import logging
+import threading
 from typing import Callable, Any
 
-logger = logging.getLogger(__name__)
+class ClickOptimizer:
+    """
+    High-frequency execution handler to minimize overhead
+    during tight autoclicker loops.
+    """
+    def __init__(self, interval: float):
+        self.interval = interval
+        self._last_time = time.perf_counter()
 
-def retry_network_operation(max_retries: int = 3, delay: float = 1.0):
-    """
-    Decorator to retry network-bound operations on failure.
-    """
-    def decorator(func: Callable):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
-            last_exception = None
-            for attempt in range(max_retries):
-                try:
-                    return func(*args, **kwargs)
-                except (ConnectionError, TimeoutError) as e:
-                    last_exception = e
-                    logger.warning(f"Attempt {attempt + 1} failed: {e}. Retrying in {delay}s...")
-                    time.sleep(delay)
-            
-            logger.error(f"Operation failed after {max_retries} attempts.")
-            raise last_exception
-        return wrapper
-    return decorator
+    def optimized_wait(self) -> None:
+        """
+        Reduces CPU busy-waiting using adaptive sleep.
+        """
+        elapsed = time.perf_counter() - self._last_time
+        remaining = self.interval - elapsed
+        if remaining > 0.002:
+            time.sleep(remaining - 0.001)
+        
+        # Spin lock for sub-millisecond precision
+        while time.perf_counter() - self._last_time < self.interval:
+            pass
+        
+        self._last_time = time.perf_counter()
 
-def validate_connection(target_url: str) -> bool:
+def batch_process(func: Callable, count: int) -> None:
     """
-    Basic connectivity check helper for the autoclicker environment.
+    Execution of rapid actions in thread-safe batches
+    to reduce context switching overhead.
     """
-    import socket
-    try:
-        host = target_url.replace("https://", "").replace("http://", "").split("/")[0]
-        socket.create_connection((host, 80), timeout=5)
-        return True
-    except (OSError, socket.timeout):
-        return False
+    for _ in range(count):
+        func()
+
+def get_high_res_timestamp() -> float:
+    """
+    Wrapper for performance counter providing monotonic timing
+    data for interval tracking.
+    """
+    return time.perf_counter()
