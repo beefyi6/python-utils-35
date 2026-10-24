@@ -1,42 +1,40 @@
 import time
-import threading
-from typing import Callable, Any
+import logging
+import functools
+from typing import Callable, Any, Type, Tuple
 
-class ClickOptimizer:
-    """
-    High-frequency execution handler to minimize overhead
-    during tight autoclicker loops.
-    """
-    def __init__(self, interval: float):
-        self.interval = interval
-        self._last_time = time.perf_counter()
+logger = logging.getLogger("autoclicker.helpers")
 
-    def optimized_wait(self) -> None:
-        """
-        Reduces CPU busy-waiting using adaptive sleep.
-        """
-        elapsed = time.perf_counter() - self._last_time
-        remaining = self.interval - elapsed
-        if remaining > 0.002:
-            time.sleep(remaining - 0.001)
-        
-        # Spin lock for sub-millisecond precision
-        while time.perf_counter() - self._last_time < self.interval:
-            pass
-        
-        self._last_time = time.perf_counter()
 
-def batch_process(func: Callable, count: int) -> None:
-    """
-    Execution of rapid actions in thread-safe batches
-    to reduce context switching overhead.
-    """
-    for _ in range(count):
-        func()
+def retry_network_op(
+    max_retries: int = 3,
+    backoff_factor: float = 0.5,
+    exceptions: Tuple[Type[Exception], ...] = (Exception,)
+) -> Callable:
+    """Decorator that retries network operations with exponential backoff.
 
-def get_high_res_timestamp() -> float:
+    Useful for autoclicker preset sync, cloud config fetching, and license checks.
     """
-    Wrapper for performance counter providing monotonic timing
-    data for interval tracking.
-    """
-    return time.perf_counter()
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            retries = 0
+            while retries < max_retries:
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as err:
+                    retries += 1
+                    if retries >= max_retries:
+                        logger.error(
+                            f"Operation '{func.__name__}' failed after {max_retries} attempts: {err}"
+                        )
+                        raise
+
+                    sleep_time = backoff_factor * (2 ** (retries - 1))
+                    logger.warning(
+                        f"Attempt {retries}/{max_retries} for '{func.__name__}' failed: {err}. "
+                        f"Retrying in {sleep_time:.2f}s..."
+                    )
+                    time.sleep(sleep_time)
+        return wrapper
+    return decorator
