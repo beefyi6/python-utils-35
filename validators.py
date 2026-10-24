@@ -1,64 +1,64 @@
-"""Validation utilities for autoclicker configuration and input parameters."""
+"""Validation utilities for autoclicker inputs and screen boundaries."""
 
-from typing import Tuple, Union
-
-
-def validate_click_interval(interval: Union[int, float]) -> float:
-    """Validate and normalize the time interval between consecutive clicks.
-
-    Args:
-        interval: Duration in seconds between clicks.
-
-    Returns:
-        The interval as a floating-point number.
-
-    Raises:
-        ValueError: If the interval is negative or zero.
-    """
-    parsed_interval = float(interval)
-    if parsed_interval <= 0:
-        raise ValueError("Click interval must be a positive number.")
-    return parsed_interval
+from typing import Tuple, Optional
 
 
-def validate_click_position(
-    x: int, y: int, max_x: int, max_y: int
-) -> Tuple[int, int]:
-    """Ensure screen coordinates are within valid monitor bounds.
-
-    Args:
-        x: Target horizontal coordinate.
-        y: Target vertical coordinate.
-        max_x: Maximum screen width boundary.
-        max_y: Maximum screen height boundary.
-
-    Returns:
-        A tuple of validated (x, y) coordinates.
-
-    Raises:
-        ValueError: If coordinates fall outside screen dimensions.
-    """
-    if not (0 <= x <= max_x and 0 <= y <= max_y):
-        raise ValueError(
-            f"Coordinates ({x}, {y}) are out of bounds (0-{max_x}, 0-{max_y})."
-        )
-    return x, y
+class ValidationError(Exception):
+    """Custom exception raised when autoclicker configuration validation fails."""
+    pass
 
 
-def validate_button(button: str) -> str:
-    """Validate mouse button selection.
+def validate_interval(cps: Optional[float] = None, interval: Optional[float] = None) -> float:
+    """Validate and calculate the delay interval between clicks in seconds."""
+    if cps is not None and interval is not None:
+        raise ValidationError("Provide either 'cps' or 'interval', not both")
 
-    Args:
-        button: The mouse button name ('left', 'right', 'middle').
+    if cps is not None:
+        if not isinstance(cps, (int, float)) or cps <= 0:
+            raise ValidationError(f"CPS must be a positive number, got: {cps}")
+        if cps > 1000:
+            raise ValidationError(f"CPS exceeds maximum safe threshold (1000), got: {cps}")
+        return 1.0 / cps
 
-    Returns:
-        Lowercase string representation of the validated button.
+    if interval is not None:
+        if not isinstance(interval, (int, float)) or interval < 0:
+            raise ValidationError(f"Interval must be a non-negative number, got: {interval}")
+        return float(interval)
 
-    Raises:
-        ValueError: If the button name is not recognized.
-    """
-    valid_buttons = {"left", "right", "middle"}
-    normalized = button.strip().lower()
-    if normalized not in valid_buttons:
-        raise ValueError(f"Invalid button '{button}'. Allowed: {valid_buttons}")
-    return normalized
+    # Default fallback interval (0.1 seconds / 10 CPS)
+    return 0.1
+
+
+def validate_coordinates(
+    coords: Optional[Tuple[int, int]],
+    screen_size: Optional[Tuple[int, int]] = None
+) -> Optional[Tuple[int, int]]:
+    """Ensure click coordinates are valid non-negative integers within screen bounds."""
+    if coords is None:
+        return None
+
+    if not isinstance(coords, (tuple, list)) or len(coords) != 2:
+        raise ValidationError(f"Coordinates must be a tuple of (x, y), got: {coords}")
+
+    x, y = coords
+    if not (isinstance(x, int) and isinstance(y, int)):
+        raise ValidationError(f"Coordinate values must be integers, got: ({type(x)}, {type(y)})")
+
+    if x < 0 or y < 0:
+        raise ValidationError(f"Coordinates cannot be negative: ({x}, {y})")
+
+    if screen_size is not None:
+        max_x, max_y = screen_size
+        if x >= max_x or y >= max_y:
+            raise ValidationError(f"Target point ({x}, {y}) is outside screen bounds ({max_x}x{max_y})")
+
+    return int(x), int(y)
+
+
+def validate_click_count(count: int) -> int:
+    """Validate click count parameter, where 0 represents infinite clicks."""
+    if not isinstance(count, int):
+        raise ValidationError(f"Click count must be an integer, got: {type(count).__name__}")
+    if count < 0:
+        raise ValidationError(f"Click count cannot be negative, got: {count}")
+    return count
