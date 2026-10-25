@@ -1,43 +1,34 @@
 import time
-import urllib.request
-import urllib.error
-import logging
-from functools import wraps
-from typing import Callable, Any
+import threading
+from typing import Callable
 
-logger = logging.getLogger(__name__)
+class ClickEngine:
+    def __init__(self, interval: float = 0.01):
+        self.interval = interval
+        self.running = False
+        self._lock = threading.Lock()
 
-def retry_network_op(
-    max_retries: int = 3,
-    delay: float = 1.0,
-    backoff_factor: float = 2.0,
-    exceptions: tuple = (urllib.error.URLError, TimeoutError, OSError)
-) -> Callable:
-    """Decorator that retries network operations with exponential backoff."""
-    def decorator(func: Callable) -> Callable:
-        @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            current_delay = delay
-            for attempt in range(1, max_retries + 1):
-                try:
-                    return func(*args, **kwargs)
-                except exceptions as err:
-                    if attempt == max_retries:
-                        logger.error("Network operation failed after %d attempts: %s", max_retries, err)
-                        raise
-                    logger.warning(
-                        "Attempt %d/%d failed (%s). Retrying in %.1fs...",
-                        attempt, max_retries, err, current_delay
-                    )
-                    time.sleep(current_delay)
-                    current_delay *= backoff_factor
-        return wrapper
-    return decorator
+    def start_optimized_loop(self, action_callback: Callable[[], None]) -> None:
+        """Executes clicks using high-resolution sleep adjustment."""
+        self.running = True
+        last_time = time.perf_counter()
+        
+        while self.running:
+            action_callback()
+            
+            # Calculate precise drift-corrected sleep time
+            elapsed = time.perf_counter() - last_time
+            sleep_time = max(0, self.interval - elapsed)
+            
+            if sleep_time > 0.001:
+                time.sleep(sleep_time)
+            
+            last_time = time.perf_counter()
 
+    def stop(self) -> None:
+        with self._lock:
+            self.running = False
 
-@retry_network_op(max_retries=3, delay=0.5)
-def fetch_remote_config(url: str, timeout: float = 5.0) -> bytes:
-    """Fetch remote autoclicker profile or update configuration."""
-    req = urllib.request.Request(url, headers={"User-Agent": "AutoClicker-Utils/3.5"})
-    with urllib.request.urlopen(req, timeout=timeout) as response:
-        return response.read()
+    def update_frequency(self, new_interval: float) -> None:
+        with self._lock:
+            self.interval = new_interval
