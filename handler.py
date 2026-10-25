@@ -1,53 +1,35 @@
-import json
-import os
-from typing import List, Dict, Any
+import time
+import logging
 
-class ClickSequenceHandler:
-    """Handles serialization, deserialization, and validation of autoclicker sequences."""
+# Configure logging for the autoclicker process
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('handler')
 
-    @staticmethod
-    def validate_step(step: Dict[str, Any]) -> bool:
-        """Validates a single autoclicker step."""
-        required_keys = {"x", "y", "delay", "button"}
-        if not all(key in step for key in required_keys):
-            return False
-        if not (isinstance(step["x"], (int, float)) and isinstance(step["y"], (int, float))):
-            return False
-        if not isinstance(step["delay"], (int, float)) or step["delay"] < 0:
-            return False
-        if step["button"] not in {"left", "right", "middle"}:
-            return False
-        return True
+def validate_inputs(clicks, interval):
+    """Ensures click count and intervals are within operational bounds."""
+    if not isinstance(clicks, int) or clicks <= 0:
+        raise ValueError(f"Invalid click count: {clicks}. Must be positive integer.")
+    if not isinstance(interval, (int, float)) or interval < 0.01:
+        raise ValueError(f"Invalid interval: {interval}. Minimum is 0.01s.")
+    return True
 
-    @classmethod
-    def load_sequence(cls, filepath: str) -> List[Dict[str, Any]]:
-        """Loads and validates a click sequence from a JSON file."""
-        if not os.path.exists(filepath):
-            raise FileNotFoundError(f"Sequence file not found: {filepath}")
+def run_click_loop(clicks, interval):
+    """Executes the main autoclicker processing loop with validation."""
+    try:
+        validate_inputs(clicks, interval)
+        logger.info(f"Starting sequence: {clicks} clicks at {interval}s interval")
+        
+        for i in range(clicks):
+            # Simulate mouse event injection
+            logger.debug(f"Click iteration {i+1} performed")
+            time.sleep(interval)
+            
+        logger.info("Sequence completed successfully")
+    except ValueError as e:
+        logger.error(f"Validation error in processing loop: {e}")
+    except Exception as e:
+        logger.critical(f"Unexpected system failure: {e}")
 
-        with open(filepath, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        if not isinstance(data, list):
-            raise ValueError("Sequence data must be a JSON list of click steps")
-
-        for index, step in enumerate(data):
-            if not cls.validate_step(step):
-                raise ValueError(f"Invalid sequence format at index {index}: {step}")
-
-        return data
-
-    @classmethod
-    def save_sequence(cls, filepath: str, sequence: List[Dict[str, Any]]) -> None:
-        """Validates and saves a click sequence to a JSON file."""
-        for index, step in enumerate(sequence):
-            if not cls.validate_step(step):
-                raise ValueError(f"Invalid step detected at index {index}: {step}")
-
-        with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(sequence, f, indent=4)
-
-    @staticmethod
-    def calculate_total_duration(sequence: List[Dict[str, Any]]) -> float:
-        """Calculates the total duration of the click sequence in seconds."""
-        return sum(step.get("delay", 0.0) for step in sequence)
+if __name__ == "__main__":
+    # Example usage for development testing
+    run_click_loop(5, 0.5)
