@@ -1,33 +1,22 @@
-import json
 import os
-from typing import Any, Dict
+from dataclasses import dataclass
 
-DEFAULT_CONFIG = {
-    "interval": 0.1,
-    "button": "left",
-    "max_clicks": 1000,
-    "hotkey": "f6"
-}
+@dataclass(frozen=True)
+class AppConfig:
+    """Global configuration for the autoclicker."""
+    click_interval: float = 0.1
+    button_code: str = 'left'
+    default_hotkey: str = 'f8'
+    log_path: str = "logs/app.log"
 
-def load_config(path: str = "config.json") -> Dict[str, Any]:
-    """Loads configuration from JSON file with defaults."""
-    config = DEFAULT_CONFIG.copy()
-    
-    if os.path.exists(path):
-        try:
-            with open(path, "r") as f:
-                user_config = json.load(f)
-                config.update(user_config)
-        except (json.JSONDecodeError, IOError):
-            pass
-            
-    return config
+def get_config() -> AppConfig:
+    """Initializes settings from environment variables with defaults."""
+    return AppConfig(
+        click_interval=float(os.getenv("CLICK_INTERVAL", 0.1)),
+        button_code=os.getenv("BUTTON_CODE", "left"),
+        default_hotkey=os.getenv("HOTKEY", "f8"),
+        log_path=os.getenv("LOG_PATH", "logs/app.log")
+    )
 
-def save_config(config: Dict[str, Any], path: str = "config.json") -> None:
-    """Persists current configuration to JSON file."""
-    with open(path, "w") as f:
-        json.dump(config, f, indent=4)
-
-if __name__ == "__main__":
-    current_cfg = load_config()
-    print(f"Active configuration: {current_cfg}")
+# Instantiate shared configuration instance
+settings = get_config()
