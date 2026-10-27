@@ -1,46 +1,61 @@
-import time
-import pyautogui
-from typing import Tuple, Optional
+from typing import Tuple, Union
 
-def perform_click(x: int, y: int, interval: float = 0.01) -> bool:
+
+class AutoclickerError(Exception):
+    """Base exception for autoclicker utility errors."""
+    pass
+
+
+class InvalidCoordinateError(AutoclickerError):
+    """Raised when target coordinates fall outside valid screen bounds."""
+    pass
+
+
+class InvalidIntervalError(AutoclickerError):
+    """Raised when the click interval is non-positive or malformed."""
+    pass
+
+
+def validate_screen_bounds(x: int, y: int, max_width: int = 3840, max_height: int = 2160) -> Tuple[int, int]:
     """
-    Executes a mouse click at specified coordinates.
+    Validates target click coordinates against screen boundaries.
 
-    Args:
-        x: Horizontal screen coordinate.
-        y: Vertical screen coordinate.
-        interval: Time duration to sleep after clicking.
+    :param x: Horizontal coordinate
+    :param y: Vertical coordinate
+    :param max_width: Maximum screen width allowed
+    :param max_height: Maximum screen height allowed
+    :return: Validated (x, y) tuple
+    """
+    if not isinstance(x, int) or not isinstance(y, int):
+        raise TypeError(f"Coordinates must be integers, got x={type(x).__name__}, y={type(y).__name__}")
 
-    Returns:
-        bool: True if click was successful, False otherwise.
+    if x < 0 or y < 0:
+        raise InvalidCoordinateError(f"Coordinates cannot be negative: ({x}, {y})")
+
+    if x > max_width or y > max_height:
+        raise InvalidCoordinateError(
+            f"Target location ({x}, {y}) exceeds screen resolution ({max_width}x{max_height})"
+        )
+
+    return x, y
+
+
+def parse_click_interval(interval: Union[int, float, str]) -> float:
+    """
+    Ensures click interval is within safe operating bounds.
+
+    :param interval: Desired delay between clicks in seconds
+    :return: Normalized delay float
     """
     try:
-        pyautogui.click(x=x, y=y)
-        time.sleep(interval)
-        return True
-    except Exception:
-        return False
+        val = float(interval)
+    except (ValueError, TypeError) as err:
+        raise InvalidIntervalError(f"Click interval must be a valid number: {interval}") from err
 
-def get_screen_center() -> Tuple[int, int]:
-    """
-    Retrieves the center coordinates of the primary display.
+    if val <= 0.001:
+        raise InvalidIntervalError(f"Interval {val}s is too fast or invalid (minimum 0.001s)")
 
-    Returns:
-        Tuple[int, int]: The (x, y) coordinates of the center.
-    """
-    width, height = pyautogui.size()
-    return (width // 2, height // 2)
+    if val > 86400:
+        raise InvalidIntervalError(f"Interval {val}s exceeds maximum allowed duration")
 
-def validate_coordinates(x: int, y: int) -> bool:
-    """
-    Checks if coordinates are within screen boundaries.
-
-    Args:
-        x: Screen X position.
-        y: Screen Y position.
-
-    Returns:
-        bool: True if coordinates are valid, False otherwise.
-    """
-    width, height = pyautogui.size()
-    return 0 <= x <= width and 0 <= y <= height
+    return round(val, 4)
