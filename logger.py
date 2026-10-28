@@ -1,53 +1,59 @@
 import logging
+import os
 import sys
 from logging.handlers import RotatingFileHandler
-from pathlib import Path
+from typing import Optional
 
 
 def setup_logger(
     name: str = "autoclicker",
-    log_file: str = "autoclicker.log",
-    max_bytes: int = 1_048_576,  # 1 MB per log file
-    backup_count: int = 3,
-    level: int = logging.INFO
+    log_file: str = "logs/autoclicker.log",
+    level: int = logging.INFO,
+    max_bytes: int = 1_048_576,  # 1 MB
+    backup_count: int = 5,
 ) -> logging.Logger:
-    """Configures and returns a logger with console and rotating file outputs."""
+    """Configures and returns a logger instance with console and rotating file handlers."""
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
-    # Avoid adding duplicate handlers if function is called multiple times
+    # Avoid adding duplicate handlers if setup is called multiple times
     if logger.handlers:
         return logger
 
-    # Common log format for click events and system status
+    # Ensure target directory exists for log files
+    log_dir = os.path.dirname(log_file)
+    if log_dir:
+        os.makedirs(log_dir, exist_ok=True)
+
+    # Formatter for clicker events and runtime status
     formatter = logging.Formatter(
         "[%(asctime)s] [%(levelname)s] [%(name)s]: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    # Ensure log directory exists
-    log_dir = Path("logs")
-    log_dir.mkdir(parents=True, exist_ok=True)
-
-    # File handler with size-based log rotation
+    # File handler with size-based rotation
     file_handler = RotatingFileHandler(
-        log_dir / log_file,
+        log_file,
         maxBytes=max_bytes,
         backupCount=backup_count,
-        encoding="utf-8"
+        encoding="utf-8",
     )
-    file_handler.setFormatter(formatter)
     file_handler.setLevel(level)
+    file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
 
-    # Console handler for real-time output during script execution
+    # Console output handler for live monitoring
     console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(formatter)
     console_handler.setLevel(level)
+    console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
 
     return logger
 
 
-# Initialize default logger instance for click automation tracking
-logger = setup_logger()
+def get_logger(name: str = "autoclicker") -> logging.Logger:
+    """Retrieves existing logger or initializes default autoclicker logger."""
+    logger = logging.getLogger(name)
+    if not logger.handlers:
+        return setup_logger(name=name)
+    return logger
