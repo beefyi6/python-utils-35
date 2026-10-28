@@ -1,40 +1,45 @@
+import random
 import time
-import logging
-import functools
-from typing import Callable, Any, Type, Tuple
-
-logger = logging.getLogger("autoclicker.helpers")
+from typing import Tuple
 
 
-def retry_network_op(
-    max_retries: int = 3,
-    backoff_factor: float = 0.5,
-    exceptions: Tuple[Type[Exception], ...] = (Exception,)
-) -> Callable:
-    """Decorator that retries network operations with exponential backoff.
+def calculate_jittered_coords(
+    coords: Tuple[int, int], radius: int = 3
+) -> Tuple[int, int]:
+    """Add small random offset to click coordinates to emulate human behavior."""
+    x, y = coords
+    offset_x = random.randint(-radius, radius)
+    offset_y = random.randint(-radius, radius)
+    return max(0, x + offset_x), max(0, y + offset_y)
 
-    Useful for autoclicker preset sync, cloud config fetching, and license checks.
-    """
-    def decorator(func: Callable) -> Callable:
-        @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            retries = 0
-            while retries < max_retries:
-                try:
-                    return func(*args, **kwargs)
-                except exceptions as err:
-                    retries += 1
-                    if retries >= max_retries:
-                        logger.error(
-                            f"Operation '{func.__name__}' failed after {max_retries} attempts: {err}"
-                        )
-                        raise
 
-                    sleep_time = backoff_factor * (2 ** (retries - 1))
-                    logger.warning(
-                        f"Attempt {retries}/{max_retries} for '{func.__name__}' failed: {err}. "
-                        f"Retrying in {sleep_time:.2f}s..."
-                    )
-                    time.sleep(sleep_time)
-        return wrapper
-    return decorator
+def get_random_delay(base_delay: float, variance: float = 0.1) -> float:
+    """Calculate a randomized delay interval to prevent rigid timing patterns."""
+    min_delay = max(0.001, base_delay - variance)
+    max_delay = base_delay + variance
+    return random.uniform(min_delay, max_delay)
+
+
+def format_duration(seconds: float) -> str:
+    """Format elapsed execution time in seconds into a readable string."""
+    mins, secs = divmod(int(seconds), 60)
+    hrs, mins = divmod(mins, 60)
+    if hrs > 0:
+        return f"{hrs}h {mins}m {secs}s"
+    if mins > 0:
+        return f"{mins}m {secs}s"
+    return f"{seconds:.2f}s" if seconds < 1 else f"{secs}s"
+
+
+def sleep_with_jitter(base_interval: float, jitter_ratio: float = 0.05) -> None:
+    """Pause execution for a randomized duration around the base interval."""
+    variance = base_interval * jitter_ratio
+    actual_delay = get_random_delay(base_interval, variance)
+    time.sleep(actual_delay)
+
+
+def is_within_bounds(coords: Tuple[int, int], screen_size: Tuple[int, int]) -> bool:
+    """Check if target coordinates reside within current screen dimensions."""
+    x, y = coords
+    max_x, max_y = screen_size
+    return 0 <= x < max_x and 0 <= y < max_y
