@@ -1,22 +1,47 @@
-import os
-from dataclasses import dataclass
+import json
+from pathlib import Path
+from typing import Any, Dict
 
-@dataclass(frozen=True)
-class AppConfig:
-    """Global configuration for the autoclicker."""
-    click_interval: float = 0.1
-    button_code: str = 'left'
-    default_hotkey: str = 'f8'
-    log_path: str = "logs/app.log"
+DEFAULT_CONFIG: Dict[str, Any] = {
+    "clicks_per_second": 10.0,
+    "mouse_button": "left",
+    "toggle_hotkey": "f6",
+    "randomize_interval": True,
+    "jitter_range_ms": 15,
+    "click_type": "single",
+    "max_clicks": 0,
+}
 
-def get_config() -> AppConfig:
-    """Initializes settings from environment variables with defaults."""
-    return AppConfig(
-        click_interval=float(os.getenv("CLICK_INTERVAL", 0.1)),
-        button_code=os.getenv("BUTTON_CODE", "left"),
-        default_hotkey=os.getenv("HOTKEY", "f8"),
-        log_path=os.getenv("LOG_PATH", "logs/app.log")
-    )
+class ConfigLoader:
+    """Handles loading and validation of autoclicker configuration settings."""
 
-# Instantiate shared configuration instance
-settings = get_config()
+    def __init__(self, config_filepath: str = "config.json"):
+        self.filepath = Path(config_filepath)
+        self.config = DEFAULT_CONFIG.copy()
+
+    def load(self) -> Dict[str, Any]:
+        """Load configuration from disk, applying defaults for missing values."""
+        if not self.filepath.exists():
+            self.save(self.config)
+            return self.config
+
+        try:
+            with open(self.filepath, "r", encoding="utf-8") as f:
+                user_config = json.load(f)
+
+            for key, val in user_config.items():
+                if key in DEFAULT_CONFIG:
+                    self.config[key] = val
+        except (json.JSONDecodeError, OSError):
+            self.config = DEFAULT_CONFIG.copy()
+
+        return self.config
+
+    def save(self, data: Dict[str, Any]) -> bool:
+        """Save current configuration dictionary to file."""
+        try:
+            with open(self.filepath, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=4)
+            return True
+        except OSError:
+            return False
