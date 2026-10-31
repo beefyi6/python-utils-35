@@ -1,45 +1,48 @@
-import random
-import time
-from typing import Tuple
+from typing import Dict, Any, Tuple, Optional
 
+ALLOWED_BUTTONS = {"left", "right", "middle"}
 
-def calculate_jittered_coords(
-    coords: Tuple[int, int], radius: int = 3
-) -> Tuple[int, int]:
-    """Add small random offset to click coordinates to emulate human behavior."""
-    x, y = coords
-    offset_x = random.randint(-radius, radius)
-    offset_y = random.randint(-radius, radius)
-    return max(0, x + offset_x), max(0, y + offset_y)
+def validate_click_params(params: Dict[str, Any], screen_bounds: Optional[Tuple[int, int]] = None) -> Dict[str, Any]:
+    """
+    Validates and cleans input parameters for the main autoclicker execution loop.
+    Raises ValueError if any input fails validation criteria.
+    """
+    validated = {}
 
+    # Validate click interval (seconds between clicks)
+    interval = params.get("interval", 0.1)
+    if not isinstance(interval, (int, float)) or interval <= 0:
+        raise ValueError(f"Invalid click interval: {interval}. Must be a positive number.")
+    validated["interval"] = float(interval)
 
-def get_random_delay(base_delay: float, variance: float = 0.1) -> float:
-    """Calculate a randomized delay interval to prevent rigid timing patterns."""
-    min_delay = max(0.001, base_delay - variance)
-    max_delay = base_delay + variance
-    return random.uniform(min_delay, max_delay)
+    # Validate target mouse button
+    button = str(params.get("button", "left")).lower()
+    if button not in ALLOWED_BUTTONS:
+        raise ValueError(f"Invalid mouse button: '{button}'. Must be one of {ALLOWED_BUTTONS}.")
+    validated["button"] = button
 
+    # Validate repetition count (-1 or 0 for infinite, positive int for fixed count)
+    repeat = params.get("repeat", 0)
+    if not isinstance(repeat, int) or repeat < -1:
+        raise ValueError(f"Invalid repeat count: {repeat}. Must be an integer >= -1.")
+    validated["repeat"] = repeat
 
-def format_duration(seconds: float) -> str:
-    """Format elapsed execution time in seconds into a readable string."""
-    mins, secs = divmod(int(seconds), 60)
-    hrs, mins = divmod(mins, 60)
-    if hrs > 0:
-        return f"{hrs}h {mins}m {secs}s"
-    if mins > 0:
-        return f"{mins}m {secs}s"
-    return f"{seconds:.2f}s" if seconds < 1 else f"{secs}s"
+    # Validate target screen coordinates if provided
+    coords = params.get("coordinates")
+    if coords is not None:
+        if not isinstance(coords, (tuple, list)) or len(coords) != 2:
+            raise ValueError("Coordinates must be a 2-element tuple or list (x, y).")
+        x, y = coords
+        if not (isinstance(x, int) and isinstance(y, int)):
+            raise ValueError("Coordinate values x and y must be integers.")
+        if x < 0 or y < 0:
+            raise ValueError(f"Coordinates cannot be negative: ({x}, {y}).")
+        if screen_bounds:
+            max_x, max_y = screen_bounds
+            if x > max_x or y > max_y:
+                raise ValueError(f"Coordinates ({x}, {y}) exceed screen bounds ({max_x}, {max_y}).")
+        validated["coordinates"] = (x, y)
+    else:
+        validated["coordinates"] = None
 
-
-def sleep_with_jitter(base_interval: float, jitter_ratio: float = 0.05) -> None:
-    """Pause execution for a randomized duration around the base interval."""
-    variance = base_interval * jitter_ratio
-    actual_delay = get_random_delay(base_interval, variance)
-    time.sleep(actual_delay)
-
-
-def is_within_bounds(coords: Tuple[int, int], screen_size: Tuple[int, int]) -> bool:
-    """Check if target coordinates reside within current screen dimensions."""
-    x, y = coords
-    max_x, max_y = screen_size
-    return 0 <= x < max_x and 0 <= y < max_y
+    return validated
