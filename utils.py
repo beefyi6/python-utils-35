@@ -1,61 +1,58 @@
-from typing import Tuple, Union
+import json
+import os
+from typing import Any, Dict, List
 
 
-class AutoclickerError(Exception):
-    """Base exception for autoclicker utility errors."""
-    pass
+def validate_click_event(event: Dict[str, Any]) -> bool:
+    """Validate single autoclicker event data structure."""
+    required_keys = {"x", "y", "delay", "button"}
+    if not required_keys.issubset(event.keys()):
+        return False
+
+    if not (isinstance(event["x"], int) and isinstance(event["y"], int)):
+        return False
+
+    if event["x"] < 0 or event["y"] < 0:
+        return False
+
+    if not isinstance(event["delay"], (int, float)) or event["delay"] < 0:
+        return False
+
+    valid_buttons = {"left", "right", "middle", "double"}
+    if event["button"] not in valid_buttons:
+        return False
+
+    return True
 
 
-class InvalidCoordinateError(AutoclickerError):
-    """Raised when target coordinates fall outside valid screen bounds."""
-    pass
+def load_click_profile(filepath: str) -> List[Dict[str, Any]]:
+    """Load and validate click sequences from a JSON profile file."""
+    if not os.path.exists(filepath):
+        raise FileNotFoundError(f"Profile path does not exist: {filepath}")
+
+    with open(filepath, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    if not isinstance(data, list):
+        raise ValueError("Profile data must be a list of click events")
+
+    for index, event in enumerate(data):
+        if not isinstance(event, dict) or not validate_click_event(event):
+            raise ValueError(f"Invalid event configuration at index {index}")
+
+    return data
 
 
-class InvalidIntervalError(AutoclickerError):
-    """Raised when the click interval is non-positive or malformed."""
-    pass
+def save_click_profile(filepath: str, events: List[Dict[str, Any]]) -> bool:
+    """Validate and export click sequence to JSON file."""
+    for index, event in enumerate(events):
+        if not validate_click_event(event):
+            raise ValueError(f"Cannot save invalid event at index {index}")
 
+    parent_dir = os.path.dirname(os.path.abspath(filepath))
+    os.makedirs(parent_dir, exist_ok=True)
 
-def validate_screen_bounds(x: int, y: int, max_width: int = 3840, max_height: int = 2160) -> Tuple[int, int]:
-    """
-    Validates target click coordinates against screen boundaries.
+    with open(filepath, "w", encoding="utf-8") as f:
+        json.dump(events, f, indent=2)
 
-    :param x: Horizontal coordinate
-    :param y: Vertical coordinate
-    :param max_width: Maximum screen width allowed
-    :param max_height: Maximum screen height allowed
-    :return: Validated (x, y) tuple
-    """
-    if not isinstance(x, int) or not isinstance(y, int):
-        raise TypeError(f"Coordinates must be integers, got x={type(x).__name__}, y={type(y).__name__}")
-
-    if x < 0 or y < 0:
-        raise InvalidCoordinateError(f"Coordinates cannot be negative: ({x}, {y})")
-
-    if x > max_width or y > max_height:
-        raise InvalidCoordinateError(
-            f"Target location ({x}, {y}) exceeds screen resolution ({max_width}x{max_height})"
-        )
-
-    return x, y
-
-
-def parse_click_interval(interval: Union[int, float, str]) -> float:
-    """
-    Ensures click interval is within safe operating bounds.
-
-    :param interval: Desired delay between clicks in seconds
-    :return: Normalized delay float
-    """
-    try:
-        val = float(interval)
-    except (ValueError, TypeError) as err:
-        raise InvalidIntervalError(f"Click interval must be a valid number: {interval}") from err
-
-    if val <= 0.001:
-        raise InvalidIntervalError(f"Interval {val}s is too fast or invalid (minimum 0.001s)")
-
-    if val > 86400:
-        raise InvalidIntervalError(f"Interval {val}s exceeds maximum allowed duration")
-
-    return round(val, 4)
+    return True
