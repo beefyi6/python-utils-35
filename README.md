@@ -1,45 +1,52 @@
 # python-utils-35
 
-A high-performance, cross-platform autoclicker library built for automation and task efficiency. This utility provides a clean programmatic interface for simulating mouse input with precision timing control.
+`python-utils-35` is a high-performance, cross-platform autoclicker library built on `pynput` for seamless automation. It provides a lightweight API for executing rapid mouse events with customizable intervals and trigger conditions.
 
 ## Features
-
-*   **Jitter Compensation:** Includes configurable randomized intervals to mimic human-like clicking behavior and avoid detection.
-*   **Dynamic Targeting:** Supports coordinate-based clicking or image recognition triggers to automate interactions with specific UI elements.
-*   **Hotkey Integration:** Built-in listener support to start or pause clicking sequences via global keyboard shortcuts.
-*   **Resource Optimized:** Utilizes low-level system APIs to ensure minimal CPU overhead during extended background execution.
+*   **Precision Timing:** Supports micro-second interval delays to simulate high-frequency click streams.
+*   **Dynamic Triggers:** Configurable keyboard shortcuts to toggle automation state without interrupting the main process.
+*   **Coordinate Support:** Capability to lock clicks to a specific screen position or follow the current cursor location.
+*   **Thread-Safe Execution:** Runs automation in a background daemon thread to maintain responsiveness of your primary application.
 
 ## Installation
 
-Ensure you have Python 3.8+ installed. You can install the package dependencies directly via pip:
+Ensure you have Python 3.7+ installed. Install the package directly via pip:
 
 ```bash
-git clone https://github.com/Developer/python-utils-35
-cd python-utils-35
-pip install -r requirements.txt
+pip install python-utils-35
 ```
 
-## Basic Usage
+For development installations, clone the repository and run:
 
-You can initialize an autoclicker instance and trigger it with a set delay in milliseconds. The following example demonstrates a basic implementation:
+```bash
+git clone https://github.com/Developer/python-utils-35.git
+cd python-utils-35
+pip install -e .
+```
+
+## Usage Example
+
+The following script initializes an autoclicker that triggers a left-click every 0.5 seconds, controlled by the `F8` key.
 
 ```python
-from utils import AutoClicker
+from utils_35 import AutoClicker
 
-# Initialize with 100ms interval
-clicker = AutoClicker(interval=0.1)
+# Initialize with a 0.5-second interval
+clicker = AutoClicker(interval=0.5, button='left')
 
-# Start clicking at current mouse position
+# Start the automation process
 clicker.start()
 
-# Stop after 5 seconds
+# Stop after 10 seconds of activity
 import time
-time.sleep(5)
+time.sleep(10)
 clicker.stop()
 ```
 
-## License
+## Contributing
+Contributions are welcome. Please open an issue or submit a pull request if you encounter bugs or have feature requests. 
 
+## License
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the `LICENSE` file for details.
