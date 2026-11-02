@@ -1,34 +1,27 @@
 import logging
-from logging.handlers import RotatingFileHandler
-import os
+import sys
+from datetime import datetime
 
-def setup_logger(name: str, log_file: str = "autoclicker.log") -> logging.Logger:
-    """
-    Configures a rotating file logger for the application.
-    Limits log size to 1MB and keeps 3 backup files.
-    """
+# Configure global logging for the autoclicker utility
+def get_logger(name: str) -> logging.Logger:
+    """Initializes a logger with standard formatting."""
     logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
-
-    # Prevent duplicate handlers if logger is re-initialized
     if not logger.handlers:
+        handler = logging.StreamHandler(sys.stdout)
         formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            datefmt="%H:%M:%S"
         )
-
-        # Rotating file handler: 1MB per file, 3 backups
-        file_handler = RotatingFileHandler(
-            log_file, maxBytes=1_048_576, backupCount=3
-        )
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
-
-        # Console output for visibility during development
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
-
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
     return logger
 
-# Global logger instance for the autoclicker module
-logger = setup_logger("autoclicker")
+def log_click_event(logger: logging.Logger, x: int, y: int, button: str) -> None:
+    """Logs click coordinates and button type."""
+    logger.info(f"action performed at ({x}, {y}) using {button} button")
+
+def log_error(logger: logging.Logger, error: Exception) -> None:
+    """Standardizes exception logging format."""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    logger.error(f"[{timestamp}] unexpected failure: {str(error)}")
