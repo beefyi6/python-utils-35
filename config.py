@@ -1,51 +1,50 @@
 import json
-from pathlib import Path
+import os
 from typing import Any, Dict
 
 DEFAULT_CONFIG: Dict[str, Any] = {
     "cps": 10.0,
     "button": "left",
     "hotkey": "f6",
-    "click_type": "single",
-    "random_jitter": 0.05,
-    "max_clicks": 0,
-    "target_location": None,
+    "random_interval_ms": 15,
+    "click_limit": 0,
+    "double_click": False,
 }
 
 
-class ConfigManager:
-    """Manages loading, merging, and saving autoclicker settings."""
+class ConfigLoader:
+    """Handles loading, validating, and saving autoclicker configurations."""
 
     def __init__(self, config_path: str = "config.json"):
-        self.config_path = Path(config_path)
-        self.settings: Dict[str, Any] = DEFAULT_CONFIG.copy()
-        self.load()
+        self.config_path = config_path
+        self.config: Dict[str, Any] = DEFAULT_CONFIG.copy()
 
     def load(self) -> Dict[str, Any]:
-        """Loads configuration from disk, falling back to defaults for missing keys."""
-        if self.config_path.exists():
-            try:
-                with open(self.config_path, "r", encoding="utf-8") as f:
-                    loaded_data = json.load(f)
-                    if isinstance(loaded_data, dict):
-                        self.settings.update(loaded_data)
-            except (json.JSONDecodeError, OSError):
-                pass
-        return self.settings
+        """Load configuration from disk, applying default values for missing keys."""
+        if not os.path.exists(self.config_path):
+            self.save()
+            return self.config
 
-    def save(self) -> bool:
-        """Saves current configuration to JSON file."""
         try:
-            with open(self.config_path, "w", encoding="utf-8") as f:
-                json.dump(self.settings, f, indent=4)
-            return True
-        except OSError:
-            return False
+            with open(self.config_path, "r", encoding="utf-8") as f:
+                user_data = json.load(f)
+                if isinstance(user_data, dict):
+                    for key, value in user_data.items():
+                        if key in DEFAULT_CONFIG:
+                            self.config[key] = value
+        except (json.JSONDecodeError, OSError):
+            self.config = DEFAULT_CONFIG.copy()
 
-    def get(self, key: str, default: Any = None) -> Any:
-        """Retrieve a specific setting value."""
-        return self.settings.get(key, default)
+        return self.config
 
-    def set(self, key: str, value: Any) -> None:
-        """Update a specific setting value."""
-        self.settings[key] = value
+    def save(self) -> None:
+        """Save current configuration to disk."""
+        target_dir = os.path.dirname(self.config_path)
+        if target_dir:
+            os.makedirs(target_dir, exist_ok=True)
+        with open(self.config_path, "w", encoding="utf-8") as f:
+            json.dump(self.config, f, indent=4)
+
+    def get(self, key: str) -> Any:
+        """Retrieve a configuration option."""
+        return self.config.get(key, DEFAULT_CONFIG.get(key))
