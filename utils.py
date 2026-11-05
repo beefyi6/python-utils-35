@@ -1,58 +1,42 @@
-import json
-import os
-from typing import Any, Dict, List
+import random
+import time
+from typing import Tuple
 
 
-def validate_click_event(event: Dict[str, Any]) -> bool:
-    """Validate single autoclicker event data structure."""
-    required_keys = {"x", "y", "delay", "button"}
-    if not required_keys.issubset(event.keys()):
-        return False
-
-    if not (isinstance(event["x"], int) and isinstance(event["y"], int)):
-        return False
-
-    if event["x"] < 0 or event["y"] < 0:
-        return False
-
-    if not isinstance(event["delay"], (int, float)) or event["delay"] < 0:
-        return False
-
-    valid_buttons = {"left", "right", "middle", "double"}
-    if event["button"] not in valid_buttons:
-        return False
-
-    return True
+def cps_to_interval(cps: float) -> float:
+    """Convert clicks per second (CPS) to seconds per click interval."""
+    if cps <= 0:
+        raise ValueError("CPS must be greater than zero.")
+    return 1.0 / cps
 
 
-def load_click_profile(filepath: str) -> List[Dict[str, Any]]:
-    """Load and validate click sequences from a JSON profile file."""
-    if not os.path.exists(filepath):
-        raise FileNotFoundError(f"Profile path does not exist: {filepath}")
-
-    with open(filepath, "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    if not isinstance(data, list):
-        raise ValueError("Profile data must be a list of click events")
-
-    for index, event in enumerate(data):
-        if not isinstance(event, dict) or not validate_click_event(event):
-            raise ValueError(f"Invalid event configuration at index {index}")
-
-    return data
+def calculate_jittered_delay(base_interval: float, jitter_percentage: float = 0.15) -> float:
+    """Add random variation (jitter) to a base delay to mimic human reaction."""
+    if base_interval <= 0:
+        return 0.0
+    
+    percentage = max(0.0, min(jitter_percentage, 1.0))
+    variation = base_interval * percentage
+    jittered = random.uniform(base_interval - variation, base_interval + variation)
+    return max(0.001, jittered)
 
 
-def save_click_profile(filepath: str, events: List[Dict[str, Any]]) -> bool:
-    """Validate and export click sequence to JSON file."""
-    for index, event in enumerate(events):
-        if not validate_click_event(event):
-            raise ValueError(f"Cannot save invalid event at index {index}")
+def randomize_point(x: int, y: int, radius: int = 5) -> Tuple[int, int]:
+    """Randomize target coordinates within a specified pixel radius."""
+    if radius <= 0:
+        return x, y
+    
+    offset_x = int(random.gauss(0, radius / 2.0))
+    offset_y = int(random.gauss(0, radius / 2.0))
+    
+    offset_x = max(-radius, min(radius, offset_x))
+    offset_y = max(-radius, min(radius, offset_y))
+    
+    return x + offset_x, y + offset_y
 
-    parent_dir = os.path.dirname(os.path.abspath(filepath))
-    os.makedirs(parent_dir, exist_ok=True)
 
-    with open(filepath, "w", encoding="utf-8") as f:
-        json.dump(events, f, indent=2)
-
-    return True
+def parse_delay_range(min_delay: float, max_delay: float) -> float:
+    """Return a random delay duration within a min/max bound in seconds."""
+    if min_delay > max_delay:
+        min_delay, max_delay = max_delay, min_delay
+    return random.uniform(max(0.0, min_delay), max(0.0, max_delay))
