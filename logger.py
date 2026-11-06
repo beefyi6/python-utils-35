@@ -1,38 +1,29 @@
 import logging
-from logging.handlers import RotatingFileHandler
-import os
+import sys
+from pathlib import Path
 
-def setup_logger(name: str, log_file: str = 'autoclicker.log', level: int = logging.INFO) -> logging.Logger:
-    """
-    Configures a rotating file logger for the autoclicker application.
-    Limits file size to 1MB and keeps 3 backup files.
-    """
+# Configure logging for the autoclicker environment
+LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+LOG_FILE = Path('autoclicker.log')
+
+def get_logger(name: str) -> logging.Logger:
+    """Initializes and returns a configured logger instance."""
     logger = logging.getLogger(name)
-    logger.setLevel(level)
+    logger.setLevel(logging.INFO)
 
-    # Prevent duplicate handlers if logger is re-initialized
+    # Console handler for real-time feedback
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+    
+    # File handler for persistent session records
+    file_handler = logging.FileHandler(LOG_FILE)
+    file_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+
     if not logger.handlers:
-        # Ensure log directory exists
-        log_dir = os.path.dirname(log_file)
-        if log_dir and not os.path.exists(log_dir):
-            os.makedirs(log_dir)
-
-        # Rotating file handler: 1MB per file, max 3 backups
-        handler = RotatingFileHandler(
-            log_file, 
-            maxBytes=1*1024*1024, 
-            backupCount=3
-        )
-        
-        # Standard formatting: timestamp - name - level - message
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        
-        logger.addHandler(handler)
-        
-        # Optional: Add stream handler for console visibility
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
+        logger.addHandler(file_handler)
 
     return logger
+
+# Module-level logger for internal usage
+logger = get_logger('python-utils-35')
