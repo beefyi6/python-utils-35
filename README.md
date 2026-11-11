@@ -1,52 +1,46 @@
 # python-utils-35
 
-`python-utils-35` is a high-performance, cross-platform autoclicker library built on `pynput` for seamless automation. It provides a lightweight API for executing rapid mouse events with customizable intervals and trigger conditions.
+A high-performance, cross-platform autoclicker library built with Python. Designed for precision automation and repetitive task execution with minimal CPU overhead.
 
 ## Features
-*   **Precision Timing:** Supports micro-second interval delays to simulate high-frequency click streams.
-*   **Dynamic Triggers:** Configurable keyboard shortcuts to toggle automation state without interrupting the main process.
-*   **Coordinate Support:** Capability to lock clicks to a specific screen position or follow the current cursor location.
-*   **Thread-Safe Execution:** Runs automation in a background daemon thread to maintain responsiveness of your primary application.
+
+*   **Configurable Intervals:** Precise millisecond-level delay settings for optimized clicking speeds.
+*   **Dynamic Targeting:** Built-in coordinate detection to target specific UI elements automatically.
+*   **Multi-Button Support:** Full support for left, right, and middle mouse button simulation.
+*   **Hotkeys & Safety:** Integrated emergency stop sequences to ensure control during automated execution.
 
 ## Installation
 
-Ensure you have Python 3.7+ installed. Install the package directly via pip:
+Ensure you have Python 3.8+ installed. You can install the package directly via pip:
 
 ```bash
-pip install python-utils-35
-```
-
-For development installations, clone the repository and run:
-
-```bash
+# Clone the repository
 git clone https://github.com/Developer/python-utils-35.git
 cd python-utils-35
-pip install -e .
+
+# Install dependencies
+pip install -r requirements.txt
 ```
 
-## Usage Example
+## Basic Usage
 
-The following script initializes an autoclicker that triggers a left-click every 0.5 seconds, controlled by the `F8` key.
+To launch a basic autoclicker instance, initialize the `Clicker` class and define your click frequency:
 
 ```python
-from utils_35 import AutoClicker
+from utils import Autoclicker
 
-# Initialize with a 0.5-second interval
-clicker = AutoClicker(interval=0.5, button='left')
+# Initialize with 100ms interval
+bot = Autoclicker(interval=0.1)
 
-# Start the automation process
-clicker.start()
+# Start clicking at the current mouse position
+bot.start()
 
-# Stop after 10 seconds of activity
-import time
-time.sleep(10)
-clicker.stop()
+# Stop after 10 seconds
+bot.stop(after=10)
 ```
 
-## Contributing
-Contributions are welcome. Please open an issue or submit a pull request if you encounter bugs or have feature requests. 
-
 ## License
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This project is licensed under the MIT License - see the `LICENSE` file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
