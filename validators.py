@@ -1,36 +1,28 @@
-import re
-from typing import Dict, Any, Optional
+import typing
 
-def validate_click_config(config: Dict[str, Any]) -> bool:
-    """Validates autoclicker configuration parameters."""
-    required_fields = ['interval', 'button', 'coordinates']
+def validate_click_params(interval: float, count: int) -> bool:
+    """
+    Ensures click parameters are within safe hardware limits.
+    Returns True if valid, raises ValueError otherwise.
+    """
+    if not isinstance(interval, (int, float)):
+        raise ValueError("Interval must be a numeric value.")
     
-    # Check for presence of mandatory keys
-    if not all(key in config for key in required_fields):
-        return False
-
-    # Validate interval range (0.01 to 60.0 seconds)
-    interval = config.get('interval')
-    if not isinstance(interval, (int, float)) or not (0.01 <= interval <= 60.0):
-        return False
-
-    # Validate button input
-    valid_buttons = ['left', 'right', 'middle']
-    if config.get('button') not in valid_buttons:
-        return False
-
-    # Validate coordinate format
-    coords = config.get('coordinates')
-    if not isinstance(coords, tuple) or len(coords) != 2:
-        return False
-    if not all(isinstance(i, int) and i >= 0 for i in coords):
-        return False
-
+    if interval < 0.001:
+        raise ValueError("Interval below 1ms can cause system instability.")
+        
+    if not isinstance(count, int):
+        raise ValueError("Click count must be an integer.")
+        
+    if count < -1:
+        raise ValueError("Count must be -1 for infinite or > 0 for finite.")
+        
     return True
 
-def sanitize_hotkey(key: str) -> Optional[str]:
-    """Ensures hotkey string matches alphanumeric format."""
-    pattern = re.compile(r'^[a-zA-Z0-9]{1,10}$')
-    if pattern.match(key):
-        return key.lower()
-    return None
+def sanitize_coordinate(x: int, y: int, screen_width: int, screen_height: int) -> typing.Tuple[int, int]:
+    """
+    Clamps mouse coordinates to current screen boundaries.
+    """
+    clamped_x = max(0, min(x, screen_width))
+    clamped_y = max(0, min(y, screen_height))
+    return (clamped_x, clamped_y)
