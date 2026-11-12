@@ -1,37 +1,49 @@
 import logging
-from logging.handlers import RotatingFileHandler
-import os
+import json
+from datetime import datetime
+from pathlib import Path
 
-def setup_logger(name: str = 'autoclicker', log_file: str = 'app.log'):
+LOG_FILE = "autoclicker_data.jsonl"
+
+# Configure logger for system events
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler()]
+)
+
+def log_click_event(x: int, y: int, button: str) -> None:
     """
-    Configures a rotating file logger for the application.
-    Max file size is 1MB, keeping up to 3 backup files.
+    Append click coordinates and metadata to local log file.
     """
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
+    event_data = {
+        "timestamp": datetime.now().isoformat(),
+        "x": x,
+        "y": y,
+        "button": button
+    }
+    
+    try:
+        with open(LOG_FILE, "a") as f:
+            f.write(json.dumps(event_data) + "\n")
+    except IOError as e:
+        logging.error(f"failed to write event to disk: {e}")
 
-    # Prevent duplicate handlers if called multiple times
-    if not logger.handlers:
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
-
-        # Rotating file handler (1MB limit)
-        file_handler = RotatingFileHandler(
-            log_file, 
-            maxBytes=1*1024*1024, 
-            backupCount=3
-        )
-        file_handler.setFormatter(formatter)
+def get_event_history(limit: int = 100) -> list:
+    """
+    Retrieve recent click events from the storage file.
+    """
+    path = Path(LOG_FILE)
+    if not path.exists():
+        return []
         
-        # Console stream handler for immediate feedback
-        stream_handler = logging.StreamHandler()
-        stream_handler.setFormatter(formatter)
-
-        logger.addHandler(file_handler)
-        logger.addHandler(stream_handler)
-
-    return logger
-
-# Default project logger instance
-logger = setup_logger()
+    history = []
+    try:
+        with open(path, "r") as f:
+            lines = f.readlines()[-limit:]
+            for line in lines:
+                history.append(json.loads(line))
+    except (IOError, json.JSONDecodeError) as e:
+        logging.error(f"failed to parse history file: {e}")
+        
+    return history
