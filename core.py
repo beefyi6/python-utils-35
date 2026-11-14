@@ -1,43 +1,31 @@
 import time
-import threading
 import pyautogui
 
-class ClickProcessor:
-    def __init__(self, interval=0.01):
-        self.interval = interval
-        self.running = False
-        self._lock = threading.Lock()
+def run_autoclicker(interval, count):
+    """Execute clicking loop with input validation."""
+    try:
+        if not isinstance(interval, (int, float)) or interval < 0.1:
+            raise ValueError("Interval must be a float >= 0.1 seconds")
+        if not isinstance(count, int) or count < 0:
+            raise ValueError("Count must be a positive integer")
+    except ValueError as e:
+        print(f"Validation error: {e}")
+        return
 
-    def start_clicking(self):
-        """Executes clicks using high-performance polling loop."""
-        self.running = True
-        # Use local references for faster lookup in hot loop
-        click = pyautogui.click
-        sleep = time.sleep
-        interval = self.interval
-
-        while self.running:
-            click()
-            sleep(interval)
-
-    def stop(self):
-        with self._lock:
-            self.running = False
-
-    def update_frequency(self, new_interval):
-        """Adjusts click rate dynamically without re-instantiation."""
-        with self._lock:
-            self.interval = max(0.001, new_interval)
-
-def execute_task(iterations, delay=0.01):
-    """Batch execution optimization for autoclicker tasks."""
-    click = pyautogui.click
-    sleep = time.sleep
+    print(f"Starting autoclicker: {count} clicks at {interval}s interval")
     
-    for _ in range(iterations):
-        click()
-        sleep(delay)
+    for i in range(count):
+        pyautogui.click()
+        time.sleep(interval)
+        print(f"Click {i + 1}/{count} performed")
 
-# Optimized constants for click handling
-PRECISION_MODE = True
-DEFAULT_LATENCY = 0.001
+def main():
+    # Configuration settings
+    click_interval = 1.0
+    click_count = 5
+
+    # Execution with validated inputs
+    run_autoclicker(click_interval, click_count)
+
+if __name__ == '__main__':
+    main()
