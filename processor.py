@@ -1,59 +1,36 @@
-import json
 import time
-from typing import List, Dict, Any
+import logging
 
-class ClickDataProcessor:
-    """Processes and formats autoclicker click sequences for execution and storage."""
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-    def __init__(self, default_delay: float = 0.1):
-        self.default_delay = max(0.001, default_delay)
+def process_clicks(interval, iterations):
+    """Executes clicks based on validated user input."""
+    if not isinstance(interval, (int, float)) or interval < 0.01:
+        raise ValueError("Interval must be a positive number greater than 0.01s")
+    
+    if not isinstance(iterations, int) or iterations < 1:
+        raise ValueError("Iterations must be an integer greater than 0")
 
-    def sanitize_click_event(self, event: Dict[str, Any]) -> Dict[str, Any]:
-        """Normalizes raw click event data with default values and bounds checking."""
-        x = int(event.get('x', 0))
-        y = int(event.get('y', 0))
-        button = str(event.get('button', 'left')).lower()
-        if button not in ('left', 'right', 'middle'):
-            button = 'left'
-
-        delay = float(event.get('delay', self.default_delay))
-        delay = max(0.001, min(delay, 3600.0))
-
-        clicks = int(event.get('clicks', 1))
-        clicks = max(1, min(clicks, 100))
-
-        return {
-            'x': max(0, x),
-            'y': max(0, y),
-            'button': button,
-            'delay': delay,
-            'clicks': clicks,
-            'timestamp': float(event.get('timestamp', time.time()))
-        }
-
-    def process_sequence(self, raw_events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Processes a list of click events, sanitizing each entry."""
-        processed = []
-        for event in raw_events:
-            if isinstance(event, dict):
-                processed.append(self.sanitize_click_event(event))
-        return processed
-
-    def export_to_json(self, events: List[Dict[str, Any]]) -> str:
-        """Serializes sanitized click events into a formatted JSON string."""
-        clean_events = self.process_sequence(events)
-        payload = {
-            'version': '1.0',
-            'count': len(clean_events),
-            'events': clean_events
-        }
-        return json.dumps(payload, indent=2)
-
-    def import_from_json(self, json_data: str) -> List[Dict[str, Any]]:
-        """Parses JSON data and returns validated click events."""
+    logger.info(f"Starting autoclicker: {iterations} clicks at {interval}s interval")
+    
+    for i in range(iterations):
         try:
-            data = json.loads(json_data)
-            events = data.get('events', []) if isinstance(data, dict) else []
-            return self.process_sequence(events)
-        except (json.JSONDecodeError, TypeError):
-            return []
+            # Simulated click operation
+            print(f"Performing click {i + 1}/{iterations}")
+            time.sleep(interval)
+        except KeyboardInterrupt:
+            logger.warning("Processing interrupted by user")
+            break
+
+def main():
+    # Example loop with validation logic
+    user_input = {'interval': 0.5, 'count': 5}
+    
+    try:
+        process_clicks(user_input['interval'], user_input['count'])
+    except (ValueError, KeyError) as e:
+        logger.error(f"Invalid configuration detected: {e}")
+
+if __name__ == "__main__":
+    main()
