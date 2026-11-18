@@ -1,36 +1,31 @@
 import json
 import os
+from typing import Dict, Any
 
 DEFAULT_CONFIG = {
-    "click_interval": 0.1,
+    "interval": 0.1,
     "button": "left",
-    "hotkey": "f6",
-    "repeat": True
+    "hold_time": 0.05,
+    "auto_start": False
 }
 
-def load_config(filepath="config.json"):
-    """Load configuration from JSON or return defaults if missing."""
+def load_config(filepath: str) -> Dict[str, Any]:
+    """Loads configuration from JSON file or returns defaults."""
+    config = DEFAULT_CONFIG.copy()
+    
     if not os.path.exists(filepath):
-        _save_defaults(filepath)
-        return DEFAULT_CONFIG
-
+        return config
+    
     try:
-        with open(filepath, "r") as f:
-            config = json.load(f)
-            # Merge with defaults to ensure missing keys are present
-            return {**DEFAULT_CONFIG, **config}
+        with open(filepath, 'r') as f:
+            user_config = json.load(f)
+            config.update(user_config)
     except (json.JSONDecodeError, IOError):
-        return DEFAULT_CONFIG
+        pass
+        
+    return config
 
-def _save_defaults(filepath):
-    """Initialize config file with default values."""
-    try:
-        with open(filepath, "w") as f:
-            json.dump(DEFAULT_CONFIG, f, indent=4)
-    except IOError as e:
-        print(f"Could not initialize config: {e}")
-
-if __name__ == "__main__":
-    # Example usage for verification
-    app_config = load_config()
-    print(f"Active config: {app_config}")
+def save_config(filepath: str, config: Dict[str, Any]) -> None:
+    """Persists configuration dictionary to JSON file."""
+    with open(filepath, 'w') as f:
+        json.dump(config, f, indent=4)
