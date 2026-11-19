@@ -1,30 +1,40 @@
-import time
 import logging
-from typing import Tuple
+import pyautogui
+import time
 
 logger = logging.getLogger(__name__)
 
-def format_coordinates(x: int, y: int) -> Tuple[int, int]:
-    """Validate and sanitize screen coordinates."""
-    return max(0, x), max(0, y)
+def safe_click(x: int, y: int, interval: float = 0.1) -> bool:
+    """Performs a click with boundary and coordinate validation."""
+    try:
+        screen_width, screen_height = pyautogui.size()
+        
+        if not (0 <= x <= screen_width and 0 <= y <= screen_height):
+            logger.error(f"Coordinates ({x}, {y}) out of screen bounds")
+            return False
+            
+        pyautogui.click(x, y)
+        time.sleep(interval)
+        return True
+        
+    except pyautogui.FailSafeException:
+        logger.warning("Fail-safe triggered: mouse moved to corner")
+        return False
+    except pyautogui.PyAutoGUIException as e:
+        logger.error(f"PyAutoGUI internal error: {e}")
+        return False
+    except Exception as e:
+        logger.exception(f"Unexpected error during click event: {e}")
+        return False
 
-def get_wait_interval(base_interval: float, jitter: float) -> float:
-    """Calculate randomized delay to simulate human behavior."""
-    import random
-    variation = random.uniform(-jitter, jitter)
-    return max(0.1, base_interval + variation)
-
-def log_click_event(x: int, y: int, action: str = "click") -> None:
-    """Standardized logging format for click events."""
-    logger.info(f"Action: {action} at coordinates ({x}, {y})")
-
-def validate_timeout(seconds: float) -> float:
-    """Ensure timeout is within acceptable operational bounds."""
-    if seconds < 0:
-        logger.warning("Negative timeout detected, defaulting to 0")
-        return 0.0
-    return float(seconds)
-
-def safe_sleep(seconds: float) -> None:
-    """Execute sleep with float precision validation."""
-    time.sleep(validate_timeout(seconds))
+def validate_interval(value: float) -> float:
+    """Ensures click interval is within practical safety limits."""
+    try:
+        interval = float(value)
+        if interval < 0.01:
+            logger.warning("Interval too low, clamping to 0.01s")
+            return 0.01
+        return interval
+    except (ValueError, TypeError):
+        logger.error("Invalid interval format, defaulting to 0.5s")
+        return 0.5
