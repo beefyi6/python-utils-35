@@ -1,46 +1,54 @@
 # python-utils-35
 
-A high-performance, cross-platform autoclicker library built with Python. Designed for precision automation and repetitive task execution with minimal CPU overhead.
+A high-performance, lightweight autoclicker utility designed for precision automation in Python. This tool leverages `pynput` to simulate system-level mouse events with customizable intervals and trigger patterns.
 
 ## Features
 
-*   **Configurable Intervals:** Precise millisecond-level delay settings for optimized clicking speeds.
-*   **Dynamic Targeting:** Built-in coordinate detection to target specific UI elements automatically.
-*   **Multi-Button Support:** Full support for left, right, and middle mouse button simulation.
-*   **Hotkeys & Safety:** Integrated emergency stop sequences to ensure control during automated execution.
+*   **Configurable Interval:** Set specific delays between clicks (in milliseconds) to match target application requirements.
+*   **Toggle System:** Bind start/stop functionality to custom hotkeys for seamless background execution.
+*   **Variable Click Modes:** Supports left, right, and middle button clicks, alongside single or double-click automation.
+*   **Anti-Detection Buffer:** Implements a randomized jitter feature to mimic human-like interaction patterns.
 
 ## Installation
 
-Ensure you have Python 3.8+ installed. You can install the package directly via pip:
+Ensure you have Python 3.7+ installed. Clone the repository and install the required dependencies:
 
 ```bash
-# Clone the repository
 git clone https://github.com/Developer/python-utils-35.git
 cd python-utils-35
-
-# Install dependencies
 pip install -r requirements.txt
 ```
 
-## Basic Usage
+## Usage
 
-To launch a basic autoclicker instance, initialize the `Clicker` class and define your click frequency:
+To launch the autoclicker with default settings, run the following command:
+
+```bash
+python main.py --interval 0.5 --button left
+```
+
+### Simple Script Example
+
+You can also import the core utility into your own scripts to trigger clicks programmatically:
 
 ```python
-from utils import Autoclicker
+from utils.clicker import AutoClicker
 
-# Initialize with 100ms interval
-bot = Autoclicker(interval=0.1)
+# Initialize with a 100ms delay
+clicker = AutoClicker(interval=0.1)
 
-# Start clicking at the current mouse position
-bot.start()
+# Start clicking at the current cursor position
+clicker.start()
 
-# Stop after 10 seconds
-bot.stop(after=10)
+# Stop clicking after a specific duration
+clicker.stop()
 ```
+
+## Contributing
+Contributions are welcome. Please submit a pull request with clear documentation of your changes or open an issue for bug reporting.
 
 ## License
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Distributed under the MIT License. See `LICENSE` for more information.
