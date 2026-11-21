@@ -1,40 +1,23 @@
-import logging
-import pyautogui
-import time
+def validate_click_params(interval, count):
+    """Ensures click settings are within operational bounds."""
+    if not isinstance(interval, (int, float)) or interval < 0.01:
+        raise ValueError("Interval must be a number >= 0.01 seconds.")
+    
+    if not isinstance(count, int) or count < -1:
+        raise ValueError("Count must be a positive integer or -1 for infinite.")
+    
+    return True
 
-logger = logging.getLogger(__name__)
-
-def safe_click(x: int, y: int, interval: float = 0.1) -> bool:
-    """Performs a click with boundary and coordinate validation."""
+def sanitize_input(value, default):
+    """Provides fallback mechanism for user input configuration."""
     try:
-        screen_width, screen_height = pyautogui.size()
-        
-        if not (0 <= x <= screen_width and 0 <= y <= screen_height):
-            logger.error(f"Coordinates ({x}, {y}) out of screen bounds")
-            return False
-            
-        pyautogui.click(x, y)
-        time.sleep(interval)
-        return True
-        
-    except pyautogui.FailSafeException:
-        logger.warning("Fail-safe triggered: mouse moved to corner")
-        return False
-    except pyautogui.PyAutoGUIException as e:
-        logger.error(f"PyAutoGUI internal error: {e}")
-        return False
-    except Exception as e:
-        logger.exception(f"Unexpected error during click event: {e}")
-        return False
-
-def validate_interval(value: float) -> float:
-    """Ensures click interval is within practical safety limits."""
-    try:
-        interval = float(value)
-        if interval < 0.01:
-            logger.warning("Interval too low, clamping to 0.01s")
-            return 0.01
-        return interval
+        parsed = float(value)
+        return parsed if parsed > 0 else default
     except (ValueError, TypeError):
-        logger.error("Invalid interval format, defaulting to 0.5s")
-        return 0.5
+        return default
+
+def get_loop_control(iteration, limit):
+    """Checks exit condition for the processing loop."""
+    if limit == -1:
+        return True
+    return iteration < limit
