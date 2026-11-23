@@ -1,45 +1,36 @@
-import time
-import random
-from typing import Tuple
+import json
+import os
+from typing import Any, Dict
 
-def get_random_delay(min_ms: int, max_ms: int) -> float:
+DEFAULT_CONFIG = {
+    "interval": 0.1,
+    "button": "left",
+    "repeat": 0,
+    "hotkey": "f6"
+}
+
+def load_config(filepath: str = "config.json") -> Dict[str, Any]:
     """
-    Calculate a random delay in seconds between two millisecond bounds.
-
-    Args:
-        min_ms: Minimum delay in milliseconds.
-        max_ms: Maximum delay in milliseconds.
-
-    Returns:
-        Randomized delay duration in seconds.
+    Loads configuration from JSON file or returns defaults
+    if the file is missing or invalid.
     """
-    return random.uniform(min_ms, max_ms) / 1000.0
+    if not os.path.exists(filepath):
+        return DEFAULT_CONFIG
 
-def validate_coordinates(x: int, y: int, screen_width: int, screen_height: int) -> bool:
+    try:
+        with open(filepath, "r") as f:
+            user_config = json.load(f)
+            # Merge user config with defaults
+            return {**DEFAULT_CONFIG, **user_config}
+    except (json.JSONDecodeError, IOError):
+        return DEFAULT_CONFIG
+
+def save_config(config: Dict[str, Any], filepath: str = "config.json") -> None:
     """
-    Verify if coordinate is within the current display boundaries.
-
-    Args:
-        x: Horizontal coordinate.
-        y: Vertical coordinate.
-        screen_width: Maximum horizontal limit.
-        screen_height: Maximum vertical limit.
-
-    Returns:
-        True if coordinate is valid, False otherwise.
+    Saves current configuration to a JSON file.
     """
-    return 0 <= x < screen_width and 0 <= y < screen_height
-
-def format_click_summary(count: int, duration: float) -> str:
-    """
-    Generate a formatted string summary for the user interface.
-
-    Args:
-        count: Number of clicks performed.
-        duration: Total execution time in seconds.
-
-    Returns:
-        Human-readable summary string.
-    """
-    avg_speed: float = duration / count if count > 0 else 0
-    return f"performed {count} clicks at {avg_speed:.4f}s interval average"
+    try:
+        with open(filepath, "w") as f:
+            json.dump(config, f, indent=4)
+    except IOError as e:
+        print(f"Failed to save configuration: {e}")
