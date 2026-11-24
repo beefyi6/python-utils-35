@@ -1,36 +1,33 @@
 import time
+import functools
 import logging
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def process_clicks(interval, iterations):
-    """Executes clicks based on validated user input."""
-    if not isinstance(interval, (int, float)) or interval < 0.01:
-        raise ValueError("Interval must be a positive number greater than 0.01s")
-    
-    if not isinstance(iterations, int) or iterations < 1:
-        raise ValueError("Iterations must be an integer greater than 0")
+def retry_operation(retries=3, delay=1.0, backoff=2.0):
+    """Decorator for retrying network operations with exponential backoff."""
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            current_retries = retries
+            current_delay = delay
+            
+            while current_retries > 0:
+                try:
+                    return func(*args, **kwargs)
+                except (ConnectionError, TimeoutError) as e:
+                    current_retries -= 1
+                    if current_retries == 0:
+                        logger.error(f"Final attempt failed for {func.__name__}")
+                        raise
+                    
+                    logger.warning(f"Retry {retries - current_retries}/{retries} for {func.__name__}: {e}")
+                    time.sleep(current_delay)
+                    current_delay *= backoff
+        return wrapper
+    return decorator
 
-    logger.info(f"Starting autoclicker: {iterations} clicks at {interval}s interval")
-    
-    for i in range(iterations):
-        try:
-            # Simulated click operation
-            print(f"Performing click {i + 1}/{iterations}")
-            time.sleep(interval)
-        except KeyboardInterrupt:
-            logger.warning("Processing interrupted by user")
-            break
-
-def main():
-    # Example loop with validation logic
-    user_input = {'interval': 0.5, 'count': 5}
-    
-    try:
-        process_clicks(user_input['interval'], user_input['count'])
-    except (ValueError, KeyError) as e:
-        logger.error(f"Invalid configuration detected: {e}")
-
-if __name__ == "__main__":
-    main()
+@retry_operation(retries=3, delay=2.0)
+def perform_network_request(request_func, *args):
+    """Example usage wrapper for network tasks."""
+    return request_func(*args)
