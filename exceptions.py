@@ -1,22 +1,28 @@
 class AutoclickerError(Exception):
-    """Base exception for all autoclicker-related issues."""
+    """Base exception class for the autoclicker."""
+    pass
+
+class ClickExecutionError(AutoclickerError):
+    """Raised when the click simulation fails."""
+    pass
+
+class HardwareAbstractionError(AutoclickerError):
+    """Raised when low-level driver interaction fails."""
     pass
 
 class ConfigurationError(AutoclickerError):
-    """Raised when the autoclicker configuration is invalid."""
+    """Raised for invalid user-defined settings."""
     pass
 
-class HardwareInputError(AutoclickerError):
-    """Raised when low-level input injection fails."""
-    pass
+def handle_exception(exc: Exception) -> None:
+    """Standardized logging wrapper for exceptions."""
+    if isinstance(exc, AutoclickerError):
+        print(f"[CRITICAL] {type(exc).__name__}: {exc}")
+    else:
+        print(f"[UNEXPECTED] {exc}")
 
-class ProcessInterrupt(AutoclickerError):
-    """Raised when the autoclicker process is force stopped."""
-    def __init__(self, message: str = "Execution interrupted by user") -> None:
-        super().__init__(message)
-
-class SafetyTriggerError(AutoclickerError):
-    """Raised when a fail-safe mechanism is activated."""
-    def __init__(self, trigger_type: str) -> None:
-        self.trigger_type: str = trigger_type
-        super().__init__(f"Safety trigger activated: {trigger_type}")
+class PerformanceBottleneckError(AutoclickerError):
+    """Raised when click interval exceeds processing latency."""
+    def __init__(self, interval: float, latency: float):
+        self.message = f"Interval {interval}s shorter than latency {latency}s"
+        super().__init__(self.message)
