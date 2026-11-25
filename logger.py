@@ -1,56 +1,57 @@
 import logging
+import os
 from logging.handlers import RotatingFileHandler
-from pathlib import Path
-
-DEFAULT_LOG_FORMAT = "[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d]: %(message)s"
-DEFAULT_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 def setup_logger(
     name: str = "autoclicker",
-    log_dir: str = "logs",
-    filename: str = "autoclicker.log",
-    max_bytes: int = 2 * 1024 * 1024,
-    backup_count: int = 5,
+    log_file: str = "logs/autoclicker.log",
     level: int = logging.INFO,
+    max_bytes: int = 1_048_576,
+    backup_count: int = 5,
+    log_to_console: bool = True,
 ) -> logging.Logger:
-    """Configure and return a logger instance with console and rotating file outputs."""
+    """Configures and returns a logger with rotating file handler."""
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
-    if logger.handlers:
-        return logger
+    # Prevent duplicate handlers when re-initializing logger
+    if logger.hasHandlers():
+        logger.handlers.clear()
 
-    formatter = logging.Formatter(fmt=DEFAULT_LOG_FORMAT, datefmt=DEFAULT_DATE_FORMAT)
+    formatter = logging.Formatter(
+        "[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 
-    # Ensure logs directory exists
-    log_path = Path(log_dir)
-    log_path.mkdir(parents=True, exist_ok=True)
-    full_file_path = log_path / filename
+    log_dir = os.path.dirname(log_file)
+    if log_dir and not os.path.exists(log_dir):
+        os.makedirs(log_dir, exist_ok=True)
 
-    # Rotating file handler for log retention
     file_handler = RotatingFileHandler(
-        filename=full_file_path,
+        filename=log_file,
         maxBytes=max_bytes,
         backupCount=backup_count,
         encoding="utf-8",
     )
-    file_handler.setLevel(level)
     file_handler.setFormatter(formatter)
+    file_handler.setLevel(level)
     logger.addHandler(file_handler)
 
-    # Console handler for real-time click tracking display
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(level)
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
+    if log_to_console:
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        console_handler.setLevel(level)
+        logger.addHandler(console_handler)
 
     return logger
 
 
-def get_logger(name: str = "autoclicker") -> logging.Logger:
-    """Fetch existing logger or initialize standard autoclicker logging."""
-    logger = logging.getLogger(name)
-    if not logger.handlers:
-        return setup_logger(name=name)
-    return logger
+def log_click_action(logger: logging.Logger, x: int, y: int, button: str = "left") -> None:
+    """Log details about a mouse click event in the autoclicker."""
+    logger.debug(f"Mouse click performed: button={button}, position=({x}, {y})")
+
+
+def log_interval_change(logger: logging.Logger, new_interval: float) -> None:
+    """Log changes to the autoclicker interval timer."""
+    logger.info(f"Click interval updated to {new_interval:.3f} seconds")
