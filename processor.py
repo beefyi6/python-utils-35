@@ -1,44 +1,29 @@
 import time
-import threading
-import pyautogui
+import logging
 
-class ClickProcessor:
-    """Handles autonomous mouse click execution tasks."""
+def run_click_loop(click_interval, max_clicks):
+    """
+    Executes the clicking logic with input validation.
+    """
+    if not isinstance(click_interval, (int, float)) or click_interval < 0.01:
+        raise ValueError("Interval must be a number >= 0.01 seconds")
+        
+    if not isinstance(max_clicks, int) or max_clicks < 1:
+        raise ValueError("Max clicks must be a positive integer")
 
-    def __init__(self, interval=0.1):
-        self.interval = interval
-        self._running = False
-        self._thread = None
-
-    def start(self):
-        """Starts the background clicking loop."""
-        if not self._running:
-            self._running = True
-            self._thread = threading.Thread(target=self._run_loop, daemon=True)
-            self._thread.start()
-
-    def stop(self):
-        """Signals the background thread to stop."""
-        self._running = False
-        if self._thread:
-            self._thread.join()
-
-    def _run_loop(self):
-        """Internal loop for continuous clicking operations."""
-        while self._running:
-            pyautogui.click()
-            time.sleep(self.interval)
-
-    def update_interval(self, new_interval):
-        """Updates the click frequency safely."""
-        if new_interval > 0:
-            self.interval = new_interval
+    logging.info(f"Starting clicker: {max_clicks} clicks at {click_interval}s interval")
+    
+    try:
+        for i in range(max_clicks):
+            # Perform mouse click logic here
+            time.sleep(click_interval)
+            logging.debug(f"Click {i+1} performed")
+    except KeyboardInterrupt:
+        logging.info("Process interrupted by user")
+    finally:
+        logging.info("Clicking cycle completed")
 
 if __name__ == "__main__":
-    # Example usage for demonstration
-    processor = ClickProcessor(interval=0.5)
-    processor.start()
-    try:
-        time.sleep(5)
-    finally:
-        processor.stop()
+    logging.basicConfig(level=logging.INFO)
+    # Example usage with validated parameters
+    run_click_loop(0.5, 10)
