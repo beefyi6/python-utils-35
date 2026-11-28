@@ -1,31 +1,49 @@
 import time
-import pyautogui
+import threading
+from typing import Callable, Optional
 
-def run_autoclicker(interval, count):
-    """Execute clicking loop with input validation."""
-    try:
-        if not isinstance(interval, (int, float)) or interval < 0.1:
-            raise ValueError("Interval must be a float >= 0.1 seconds")
-        if not isinstance(count, int) or count < 0:
-            raise ValueError("Count must be a positive integer")
-    except ValueError as e:
-        print(f"Validation error: {e}")
-        return
+class FastClickEngine:
+    """High-performance click timing engine with low-jitter interval control."""
 
-    print(f"Starting autoclicker: {count} clicks at {interval}s interval")
-    
-    for i in range(count):
-        pyautogui.click()
-        time.sleep(interval)
-        print(f"Click {i + 1}/{count} performed")
+    def __init__(self, click_action: Callable[[], None], interval: float = 0.01):
+        self.click_action = click_action
+        self.interval = max(0.001, interval)
+        self._running = False
+        self._thread: Optional[threading.Thread] = None
+        self._clicks_count = 0
 
-def main():
-    # Configuration settings
-    click_interval = 1.0
-    click_count = 5
+    def start(self) -> None:
+        """Start the click execution loop in a background thread."""
+        if self._running:
+            return
+        self._running = True
+        self._clicks_count = 0
+        self._thread = threading.Thread(target=self._run_loop, daemon=True)
+        self._thread.start()
 
-    # Execution with validated inputs
-    run_autoclicker(click_interval, click_count)
+    def stop(self) -> None:
+        """Stop the click execution thread."""
+        self._running = False
+        if self._thread and self._thread.is_alive():
+            self._thread.join(timeout=1.0)
 
-if __name__ == '__main__':
-    main()
+    def _run_loop(self) -> None:
+        """Optimized execution loop using perf_counter to minimize drift."""
+        next_time = time.perf_counter()
+        
+        while self._running:
+            now = time.perf_counter()
+            if now >= next_time:
+                self.click_action()
+                self._clicks_count += 1
+                # Prevent cumulative timing drift by adding to target schedule
+                next_time += self.interval
+            else:
+                sleep_time = next_time - now
+                # Use hybrid sleep/spin for low latency without high CPU spike
+                if sleep_time > 0.002:
+                    time.sleep(sleep_time - 0.001)
+
+    @property
+    def clicks_count(self) -> int:
+        return self._clicks_count
